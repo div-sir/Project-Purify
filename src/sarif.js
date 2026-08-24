@@ -11,8 +11,12 @@ function findingCategory(finding) {
   return finding.category ?? finding.type ?? 'unicode';
 }
 
+function findingRuleKey(finding) {
+  return finding.label ?? finding.riskyPairs?.join('-') ?? finding.scripts?.join('-') ?? 'unknown';
+}
+
 function ruleIdFor(finding) {
-  return `project-purify/${findingCategory(finding)}/${finding.label ?? 'unknown'}`;
+  return `project-purify/${findingCategory(finding)}/${findingRuleKey(finding)}`;
 }
 
 function ruleFor(finding) {
@@ -23,7 +27,7 @@ function ruleFor(finding) {
       text: finding.reason ?? 'Suspicious Unicode text artifact.'
     },
     fullDescription: {
-      text: finding.remediation ?? 'Review the Unicode character in context.'
+      text: finding.remediation ?? 'Review the Unicode content in context.'
     },
     defaultConfiguration: {
       level: levelForSeverity(finding.severity)
@@ -40,18 +44,25 @@ function resultForFinding(finding, artifactUri, options = {}) {
     artifactLocation: { uri: artifactUri }
   };
 
-  if (options.includeRegion !== false && Number.isInteger(finding.charIndex)) {
+  const utf16Offset = Number.isInteger(finding.utf16Index) ? finding.utf16Index : null;
+  if (options.includeRegion !== false && utf16Offset !== null) {
+    const utf16Length = Number.isInteger(finding.utf16Length)
+      ? finding.utf16Length
+      : typeof finding.char === 'string'
+        ? Math.max(1, finding.char.length)
+        : 1;
     physicalLocation.region = {
-      charOffset: finding.charIndex,
-      charLength: 1
+      charOffset: utf16Offset,
+      charLength: utf16Length
     };
   }
 
+  const label = finding.label ?? finding.token ?? finding.type ?? 'Unicode finding';
   return {
     ruleId: ruleIdFor(finding),
     level: levelForSeverity(finding.severity),
     message: {
-      text: `${finding.label ?? 'Unicode finding'}: ${finding.reason ?? finding.name ?? finding.type ?? 'Review this character.'}`
+      text: `${label}: ${finding.reason ?? finding.name ?? finding.type ?? 'Review this content.'}`
     },
     locations: [{ physicalLocation }],
     properties: {
@@ -59,7 +70,8 @@ function resultForFinding(finding, artifactUri, options = {}) {
       category: findingCategory(finding),
       severity: finding.severity,
       remediation: finding.remediation,
-      logicalPath: options.logicalPath ?? null
+      logicalPath: options.logicalPath ?? null,
+      scripts: finding.scripts ?? null
     }
   };
 }
@@ -67,7 +79,8 @@ function resultForFinding(finding, artifactUri, options = {}) {
 function findingsFromReport(report) {
   return [
     ...(report?.findings?.unicode ?? []),
-    ...(report?.findings?.confusables ?? [])
+    ...(report?.findings?.confusables ?? []),
+    ...(report?.findings?.mixedScripts ?? [])
   ];
 }
 
