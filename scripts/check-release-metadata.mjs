@@ -20,10 +20,13 @@ function requireCondition(condition, message) {
   if (!condition) errors.push(message);
 }
 
+const documentedVersion = readme.includes(`\`${PROJECT_PURIFY_VERSION}\``)
+  || readme.includes(`\`v${PROJECT_PURIFY_VERSION}\``);
+
 requireCondition(pkg.version === PROJECT_PURIFY_VERSION,
   `package.json version ${pkg.version} does not match src/version.js ${PROJECT_PURIFY_VERSION}.`);
-requireCondition(readme.includes(`\`${PROJECT_PURIFY_VERSION}\``),
-  `README.md does not mention current version ${PROJECT_PURIFY_VERSION}.`);
+requireCondition(documentedVersion,
+  `README.md does not mention current version ${PROJECT_PURIFY_VERSION} (with optional v prefix).`);
 requireCondition(readme.includes(`schema \`${REPORT_SCHEMA_VERSION}\``),
   `README.md does not mention report schema ${REPORT_SCHEMA_VERSION}.`);
 requireCondition(schemaDoc.includes(`Current schema version: \`${REPORT_SCHEMA_VERSION}\``),
