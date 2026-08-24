@@ -12,6 +12,9 @@ const CORE_FILES = [
   'scanner.js',
   'confusables.js',
   'scripts.js',
+  'hash.js',
+  'options.js',
+  'version.js',
   'report.js',
   'workbench.js'
 ];
