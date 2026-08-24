@@ -47,6 +47,45 @@ test('mixed-script spoof can trigger severity policy', () => {
   assert.match(result.stdout, /Mixed-script findings: 1/);
 });
 
+test('audit output can be self-contained and integrity protected', () => {
+  const result = run(['--text', 'A\u200BB', '--audit', '--include-input']);
+  assert.equal(result.status, 0, result.stderr);
+  const bundle = JSON.parse(result.stdout);
+  assert.equal(bundle.bundleVersion, '1.0.0');
+  assert.equal(bundle.evidence.inputText, 'A\u200BB');
+  assert.match(bundle.evidence.inputSha256, /^[a-f0-9]{64}$/);
+  assert.match(bundle.integrity.bundleSha256, /^[a-f0-9]{64}$/);
+});
+
+test('audit refuses structured single-file input', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'purify-cli-'));
+  const file = path.join(dir, 'data.json');
+  await fs.writeFile(file, JSON.stringify({ value: 'A\u200BB' }), 'utf8');
+  const result = run(['--file', file, '--audit']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /in-memory text\/source report/);
+});
+
+test('compare-reports produces deterministic comparison JSON', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'purify-cli-'));
+  const left = path.join(dir, 'left.json');
+  const right = path.join(dir, 'right.json');
+
+  const leftResult = run(['--text', 'paypal', '--language', 'en', '--json']);
+  const rightResult = run(['--text', 'pаypal', '--language', 'en', '--json']);
+  assert.equal(leftResult.status, 0, leftResult.stderr);
+  assert.equal(rightResult.status, 0, rightResult.stderr);
+  await fs.writeFile(left, leftResult.stdout, 'utf8');
+  await fs.writeFile(right, rightResult.stdout, 'utf8');
+
+  const comparison = run(['--compare-reports', left, right]);
+  assert.equal(comparison.status, 0, comparison.stderr);
+  const parsed = JSON.parse(comparison.stdout);
+  assert.equal(parsed.input.sameHash, false);
+  assert.equal(parsed.summaryDelta.mixedScriptCount, 1);
+  assert.equal(parsed.equivalent, false);
+});
+
 test('directory mode discovers nested supported files', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'purify-cli-'));
   const nested = path.join(dir, 'nested');
