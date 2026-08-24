@@ -5,9 +5,10 @@ import { buildReport } from './report.js';
 import { analyzeFile, analyzeFiles, DEFAULT_MAX_FILE_BYTES } from './files.js';
 import { discoverFiles } from './discovery.js';
 import { reportFailsSeverity, resultFailsSeverity, validateSeverity } from './policy.js';
+import { reportToSarif, fileResultToSarif, batchResultsToSarif } from './sarif.js';
 
 function usage() {
-  return `Project Purify CLI\n\nUsage:\n  project-purify --text "text" [--json]\n  project-purify --file path/to/file.txt [--json]\n  project-purify --batch a.txt b.md data.json [--json | --jsonl]\n  project-purify --dir . [--include "**/*.js"] [--exclude "**/dist/**"]\n  cat file.txt | project-purify [--json]\n\nOptions:\n  --text <text>              Analyze literal text.\n  --file <path>              Analyze one supported UTF-8 file.\n  --batch <paths...>         Analyze multiple supported files.\n  --dir <path>               Discover and analyze supported files recursively.\n  --include <glob>           Directory include glob. Repeat as needed.\n  --exclude <glob>           Directory exclude glob. Repeat as needed.\n  --json                     Print complete JSON output.\n  --jsonl                    Print one JSON object per batch input line.\n  --clean                    Print only safe cleaned text for a single rewritable input.\n  --aggressive               Also remove ZWJ and variation selectors.\n  --dry-run                  Report changes without printing cleaned payloads.\n  --fail-on-severity <level> Exit 3 when low, medium, or high threshold is met.\n  --max-bytes <bytes>        In-memory per-file limit. Default: ${DEFAULT_MAX_FILE_BYTES}.\n  --stream                   Use detect-only streaming when plain/source files exceed --max-bytes.\n  --help                     Show this help.\n`;
+  return `Project Purify CLI\n\nUsage:\n  project-purify --text "text" [--json | --sarif]\n  project-purify --file path/to/file.txt [--json | --sarif]\n  project-purify --batch a.txt b.md data.json [--json | --jsonl | --sarif]\n  project-purify --dir . [--include "**/*.js"] [--exclude "**/dist/**"] [--sarif]\n  cat file.txt | project-purify [--json | --sarif]\n\nOptions:\n  --text <text>              Analyze literal text.\n  --file <path>              Analyze one supported UTF-8 file.\n  --batch <paths...>         Analyze multiple supported files.\n  --dir <path>               Discover and analyze supported files recursively.\n  --include <glob>           Directory include glob. Repeat as needed.\n  --exclude <glob>           Directory exclude glob. Repeat as needed.\n  --json                     Print complete JSON output.\n  --jsonl                    Print one JSON object per batch input line.\n  --sarif                    Print SARIF 2.1.0 for code-scanning integrations.\n  --clean                    Print only safe cleaned text for a single rewritable input.\n  --aggressive               Also remove ZWJ and variation selectors.\n  --dry-run                  Report changes without printing cleaned payloads.\n  --fail-on-severity <level> Exit 3 when low, medium, or high threshold is met.\n  --max-bytes <bytes>        In-memory per-file limit. Default: ${DEFAULT_MAX_FILE_BYTES}.\n  --stream                   Use detect-only streaming when plain/source files exceed --max-bytes.\n  --help                     Show this help.\n`;
 }
 
 function getValue(args, name) {
@@ -90,7 +91,9 @@ async function runBatch(paths, args, options) {
     streamLargeFiles: options.streamLargeFiles
   });
 
-  if (args.includes('--jsonl')) {
+  if (args.includes('--sarif')) {
+    process.stdout.write(`${JSON.stringify(batchResultsToSarif(results), null, 2)}\n`);
+  } else if (args.includes('--jsonl')) {
     for (const result of results) process.stdout.write(`${JSON.stringify(result)}\n`);
   } else if (args.includes('--json')) {
     process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
@@ -114,6 +117,8 @@ async function runSingleFile(filePath, args, options) {
   if (args.includes('--clean')) {
     if (options.dryRun) throw new Error('--dry-run cannot be combined with --clean.');
     process.stdout.write(cleanedFilePayload(result));
+  } else if (args.includes('--sarif')) {
+    process.stdout.write(`${JSON.stringify(fileResultToSarif(result), null, 2)}\n`);
   } else if (args.includes('--json')) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else {
@@ -153,7 +158,9 @@ async function main() {
   if (args.includes('--file') && fileArg === null) throw new Error('--file requires a path.');
   if (args.includes('--dir') && dirArg === null) throw new Error('--dir requires a path.');
   if (selectedInputs > 1) throw new Error('Use only one input source: --text, --file, --batch, --dir, or stdin.');
-  if (args.includes('--json') && args.includes('--jsonl')) throw new Error('Use only one machine-readable format: --json or --jsonl.');
+
+  const machineFormats = ['--json', '--jsonl', '--sarif'].filter((flag) => args.includes(flag));
+  if (machineFormats.length > 1) throw new Error('Use only one machine-readable format: --json, --jsonl, or --sarif.');
 
   const failOnSeverity = getValue(args, '--fail-on-severity');
   if (args.includes('--fail-on-severity') && failOnSeverity === null) throw new Error('--fail-on-severity requires low, medium, or high.');
@@ -202,6 +209,8 @@ async function main() {
   if (args.includes('--clean')) {
     if (options.dryRun) throw new Error('--dry-run cannot be combined with --clean.');
     process.stdout.write(report.transformations.cleanedText);
+  } else if (args.includes('--sarif')) {
+    process.stdout.write(`${JSON.stringify(reportToSarif(report), null, 2)}\n`);
   } else if (args.includes('--json')) {
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   } else {
