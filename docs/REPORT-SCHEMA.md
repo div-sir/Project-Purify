@@ -1,8 +1,10 @@
 # Project Purify Forensic Report Schema
 
-Current schema version: `1.3.0`.
+Current schema version: `1.4.0`.
 
 The report is deterministic for the same Project Purify build, Unicode datasets, input text, and normalized analysis options.
+
+Schema `1.4.0` records the v0.9 conservative cleaning contract. Shaping-, direction-, presentation-, and tag-sensitive controls are preserved by default and their explicit removal options are included in `analysisOptions`.
 
 ## Top-level fields
 
@@ -15,7 +17,7 @@ Version of the report contract. Consumers MUST check this before assuming field 
 ```json
 {
   "name": "Project Purify",
-  "version": "0.8.0-dev"
+  "version": "0.9.0-dev"
 }
 ```
 
@@ -28,8 +30,11 @@ The normalized options actually used for analysis.
 ```json
 {
   "clean": {
+    "removeZeroWidthNonJoiner": false,
     "removeZeroWidthJoiner": false,
+    "removeDirectionalControls": false,
     "removeVariationSelectors": false,
+    "removeTagCharacters": false,
     "normalize": "NFC"
   },
   "confusables": {
@@ -43,17 +48,30 @@ The normalized options actually used for analysis.
 }
 ```
 
-Consumers SHOULD preserve this object with the report. The same input can produce different policy findings when these options differ.
+Consumers SHOULD preserve this object with the report. The same input can produce different policy findings or cleaned output when these options differ.
+
+Conservative defaults intentionally preserve Unicode that can be required for legitimate language shaping, bidi layout, emoji/glyph presentation, or standardized tag sequences. Detection remains active even when cleaning preserves a character.
 
 ### `evidenceHashes`
 
 SHA-256 digests of the UTF-8 encoded strings used by the report.
 
 - `input`: original input text.
-- `cleaned`: safe-cleaning output.
+- `cleaned`: conservative-cleaning output.
 - `confusableSkeleton`: UTS #39-style skeleton output.
 
 The hashes establish content identity. They do not establish authorship or origin.
+
+### `evidenceInterpretation`
+
+Machine-readable interpretation limits. Current reports state that:
+
+- analysis is deterministic and rule-based;
+- attribution is unsupported;
+- attribution confidence is `null`;
+- severity is not a probability.
+
+Consumers MUST NOT convert severity into an AI-authorship or malicious-intent confidence score.
 
 ### `dataProvenance`
 
@@ -69,7 +87,7 @@ A fallback build can produce less complete findings than a build generated from 
 Length metadata for the raw input:
 
 - `utf16Length`: JavaScript/UTF-16 code-unit length.
-- `codePointLength`: Unicode scalar/code-point iteration length.
+- `codePointLength`: Unicode code-point iteration length.
 
 See [OFFSETS.md](./OFFSETS.md) before mapping findings into editors or SARIF.
 
@@ -91,6 +109,8 @@ Aggregate counts:
 
 `highRiskCount` is a Project Purify policy result. It is not a probability and MUST NOT be interpreted as confidence that the text is AI-generated or malicious.
 
+Large-file streaming output is not a normal report object. Streaming explicitly records mixed-script token coverage as `not-evaluated` instead of reporting a false zero.
+
 ### `findings`
 
 Three finding collections:
@@ -103,7 +123,7 @@ Each finding has a stable ID for a given input and analysis position. IDs are no
 
 ### `transformations`
 
-- `cleanedText`: safe-cleaning output.
+- `cleanedText`: conservative-cleaning output.
 - `changes`: original-versus-cleaned change records.
 - `confusableSkeleton`: comparison skeleton.
 
@@ -124,7 +144,7 @@ It can support statements such as:
 - “This input contains U+200B at this position.”
 - “This token mixes Latin and Cyrillic characters.”
 - “This build maps these characters to this confusable skeleton.”
-- “Safe cleaning removed these format controls under these options.”
+- “Conservative cleaning removed these controls under these recorded options.”
 
 It does **not** support statements such as:
 
@@ -135,8 +155,8 @@ It does **not** support statements such as:
 
 Attribution confidence is therefore intentionally **unsupported**. Consumers SHOULD present findings as deterministic text evidence plus explicit policy interpretation.
 
-## Compatibility policy before v1.0
+## Compatibility
 
-Report schema changes can occur during the `0.x` development series. Consumers SHOULD pin both Project Purify version and `schemaVersion`.
+Project Purify is still pre-1.0. Consumers SHOULD pin both Project Purify version and `schemaVersion`.
 
-A stable migration/deprecation policy is a v1.0 release requirement.
+See [API-COMPATIBILITY.md](./API-COMPATIBILITY.md) for the full compatibility and deprecation policy.
