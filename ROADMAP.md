@@ -38,10 +38,12 @@ Status: in progress.
 - [x] Add aggregate severity and category summaries.
 - [x] Add CLI input from arguments, stdin, and files.
 - [x] Add machine-readable JSON output.
-- [ ] Add complete Unicode confusables data generated from Unicode Consortium data.
-- [ ] Add stable finding IDs and remediation reasons.
-- [ ] Add snapshot fixtures for multilingual text.
-- [ ] Add fuzz/property tests for scanner invariants.
+- [x] Add stable finding IDs and remediation reasons.
+- [x] Add snapshot fixtures for multilingual text.
+- [x] Add deterministic fuzz/property tests for scanner invariants.
+- [x] Add a version-pinned Unicode Consortium confusables data generator.
+- [ ] Integrate the generated full Unicode 17.0.0 confusables mapping into the runtime detector.
+- [ ] Add generated-data provenance and integrity metadata.
 
 Exit criteria: the same input produces a stable, explainable report from library and CLI.
 
