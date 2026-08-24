@@ -11,6 +11,16 @@ function normalizeFinding(finding, source) {
     };
   }
 
+  if (source === 'mixed-script') {
+    return {
+      ...finding,
+      source,
+      category: 'mixed-script',
+      title: `Mixed script: ${finding.scripts.join(' + ')}`,
+      detail: finding.token
+    };
+  }
+
   return {
     ...finding,
     source,
@@ -33,11 +43,13 @@ export function annotateText(text, findings) {
     const atIndex = byIndex.get(charIndex) ?? [];
     const unicode = atIndex.find((finding) => finding.source === 'unicode');
     const confusable = atIndex.find((finding) => finding.source === 'confusable');
+    const mixed = atIndex.find((finding) => finding.source === 'mixed-script');
 
     if (unicode) out += `⟦${unicode.label} ${unicode.name}⟧`;
     else out += ch;
 
     if (confusable) out += `⟦confusable ${confusable.label}→${confusable.skeleton}⟧`;
+    if (mixed) out += `⟦mixed ${mixed.scripts.join('+')} token=${mixed.token}⟧`;
     charIndex += 1;
   }
   return out;
@@ -47,7 +59,8 @@ export function createWorkbenchModel(text, options = {}) {
   const report = buildReport(text, options);
   const findings = [
     ...report.findings.unicode.map((finding) => normalizeFinding(finding, 'unicode')),
-    ...report.findings.confusables.map((finding) => normalizeFinding(finding, 'confusable'))
+    ...report.findings.confusables.map((finding) => normalizeFinding(finding, 'confusable')),
+    ...report.findings.mixedScripts.map((finding) => normalizeFinding(finding, 'mixed-script'))
   ].sort((a, b) => a.charIndex - b.charIndex || a.source.localeCompare(b.source));
 
   return {
