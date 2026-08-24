@@ -11,8 +11,14 @@ const GENERATED_OUTPUT = path.join(CORE_OUTPUT, 'generated');
 const CORE_FILES = [
   'scanner.js',
   'confusables.js',
+  'scripts.js',
   'report.js',
   'workbench.js'
+];
+
+const GENERATED_FILES = [
+  'confusables-data.js',
+  'scripts-data.js'
 ];
 
 await fs.rm(OUTPUT, { recursive: true, force: true });
@@ -23,10 +29,12 @@ await fs.mkdir(GENERATED_OUTPUT, { recursive: true });
 for (const name of CORE_FILES) {
   await fs.copyFile(path.join(ROOT, 'src', name), path.join(CORE_OUTPUT, name));
 }
-await fs.copyFile(
-  path.join(ROOT, 'src', 'generated', 'confusables-data.js'),
-  path.join(GENERATED_OUTPUT, 'confusables-data.js')
-);
+for (const name of GENERATED_FILES) {
+  await fs.copyFile(
+    path.join(ROOT, 'src', 'generated', name),
+    path.join(GENERATED_OUTPUT, name)
+  );
+}
 
 const manifest = JSON.parse(await fs.readFile(path.join(OUTPUT, 'manifest.json'), 'utf8'));
 if (manifest.manifest_version !== 3) throw new Error('Extension manifest must use Manifest V3.');
