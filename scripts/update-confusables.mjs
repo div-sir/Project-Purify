@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fetchUnicodeText } from './fetch-unicode.mjs';
 
 const UNICODE_VERSION = process.env.UNICODE_VERSION ?? '17.0.0';
 const SOURCE = `https://www.unicode.org/Public/${UNICODE_VERSION}/security/confusables.txt`;
@@ -12,9 +13,7 @@ function parseSequence(field) {
   return field.trim().split(/\s+/).filter(Boolean).map((hex) => String.fromCodePoint(Number.parseInt(hex, 16))).join('');
 }
 
-const response = await fetch(SOURCE);
-if (!response.ok) throw new Error(`Failed to fetch ${SOURCE}: ${response.status}`);
-const text = await response.text();
+const text = await fetchUnicodeText(SOURCE);
 const sourceSha256 = createHash('sha256').update(text, 'utf8').digest('hex');
 const sourceDate = text.match(/^#\s*Date:\s*(.+)$/m)?.[1]?.trim() ?? null;
 const entries = [];
@@ -27,6 +26,7 @@ for (const line of text.split(/\r?\n/)) {
   const sourcePoints = sourceField.split(/\s+/);
   if (sourcePoints.length !== 1) continue;
   const cp = Number.parseInt(sourcePoints[0], 16);
+  if (!Number.isInteger(cp) || cp < 0 || cp > 0x10FFFF) throw new Error(`Invalid confusable source code point: ${sourcePoints[0]}`);
   entries.push([cp, parseSequence(targetField)]);
 }
 
