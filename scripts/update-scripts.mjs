@@ -45,7 +45,6 @@ const metadata = {
   sourceUrl: SOURCE,
   sourceSha256,
   sourceDate,
-  generatedAt: new Date().toISOString(),
   rangeCount: merged.length,
   completeness: 'full'
 };
@@ -53,6 +52,7 @@ const metadata = {
 const lines = [
   '// Generated file. Do not edit by hand.',
   `// Source: ${SOURCE}`,
+  `// SHA-256: ${sourceSha256}`,
   `export const SCRIPTS_METADATA = Object.freeze(${JSON.stringify(metadata, null, 2)});`,
   'export const SCRIPT_RANGES = Object.freeze([',
   ...merged.map(([start, end, script]) => `  [0x${start.toString(16).toUpperCase()}, 0x${end.toString(16).toUpperCase()}, ${JSON.stringify(script)}],`),
