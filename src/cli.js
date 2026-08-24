@@ -12,7 +12,7 @@ import { createAuditBundle } from './evidence.js';
 import { compareReports } from './compare.js';
 
 function usage() {
-  return `Project Purify CLI\n\nUsage:\n  project-purify --text "text" [--json | --sarif | --audit]\n  project-purify --file path/to/file.txt [--json | --sarif | --audit]\n  project-purify --batch a.txt b.md data.json [--json | --jsonl | --sarif]\n  project-purify --dir . [--include "**/*.js"] [--exclude "**/dist/**"] [--sarif]\n  project-purify --compare-reports before.json after.json\n  cat file.txt | project-purify [--json | --sarif | --audit]\n\nOptions:\n  --text <text>              Analyze literal text.\n  --file <path>              Analyze one supported UTF-8 file.\n  --batch <paths...>         Analyze multiple supported files.\n  --dir <path>               Discover and analyze supported files recursively.\n  --compare-reports <a> <b> Compare two Project Purify report JSON files.\n  --include <glob>           Directory include glob. Repeat as needed.\n  --exclude <glob>           Directory exclude glob. Repeat as needed.\n  --language <hint>          Script policy hint: ${VALID_LANGUAGE_HINTS.join(', ')}.\n  --json                     Print complete JSON output.\n  --jsonl                    Print one JSON object per batch input line.\n  --sarif                    Print SARIF 2.1.0 for code-scanning integrations.\n  --audit                    Print a reproducible single-input audit bundle.\n  --include-input            Include original text in --audit for self-contained reproduction.\n  --clean                    Print only conservative cleaned text for a single rewritable input.\n  --aggressive               Also remove ZWNJ, ZWJ, bidi direction controls, and variation selectors.\n  --dry-run                  Report changes without printing cleaned payloads.\n  --fail-on-severity <level> Exit 3 when low, medium, or high threshold is met.\n  --max-bytes <bytes>        In-memory per-file limit. Default: ${DEFAULT_MAX_FILE_BYTES}.\n  --stream                   Use detect-only streaming when plain/source files exceed --max-bytes.\n  --help                     Show this help.\n`;
+  return `Project Purify CLI\n\nUsage:\n  project-purify --text "text" [--json | --sarif | --audit]\n  project-purify --file path/to/file.txt [--json | --sarif | --audit]\n  project-purify --batch a.txt b.md data.json [--json | --jsonl | --sarif]\n  project-purify --dir . [--include "**/*.js"] [--exclude "**/dist/**"] [--sarif]\n  project-purify --compare-reports before.json after.json\n  cat file.txt | project-purify [--json | --sarif | --audit]\n\nOptions:\n  --text <text>              Analyze literal text.\n  --file <path>              Analyze one supported UTF-8 file.\n  --batch <paths...>         Analyze multiple supported files.\n  --dir <path>               Discover and analyze supported files recursively.\n  --compare-reports <a> <b> Compare two Project Purify report JSON files.\n  --include <glob>           Directory include glob. Repeat as needed.\n  --exclude <glob>           Directory exclude glob. Repeat as needed.\n  --language <hint>          Script policy hint: ${VALID_LANGUAGE_HINTS.join(', ')}.\n  --json                     Print complete JSON output.\n  --jsonl                    Print one JSON object per batch input line.\n  --sarif                    Print SARIF 2.1.0 for code-scanning integrations.\n  --audit                    Print a reproducible single-input audit bundle.\n  --include-input            Include original text in --audit for self-contained reproduction.\n  --clean                    Print only conservative cleaned text for a single rewritable input.\n  --aggressive               Also remove ZWNJ, ZWJ, bidi controls, variation selectors, and tag characters.\n  --dry-run                  Report changes without printing cleaned payloads.\n  --fail-on-severity <level> Exit 3 when low, medium, or high threshold is met.\n  --max-bytes <bytes>        In-memory per-file limit. Default: ${DEFAULT_MAX_FILE_BYTES}.\n  --stream                   Use detect-only streaming when plain/source files exceed --max-bytes.\n  --help                     Show this help.\n`;
 }
 
 function getValue(args, name) {
@@ -56,7 +56,8 @@ function cleanOptions(aggressive) {
     removeZeroWidthNonJoiner: aggressive,
     removeZeroWidthJoiner: aggressive,
     removeDirectionalControls: aggressive,
-    removeVariationSelectors: aggressive
+    removeVariationSelectors: aggressive,
+    removeTagCharacters: aggressive
   };
 }
 
@@ -67,6 +68,11 @@ function reportOptions(options) {
       languageHint: options.languageHint
     }
   };
+}
+
+function mixedScriptDisplay(result) {
+  if (result?.analysisCoverage?.mixedScriptTokens === 'not-evaluated') return 'not-evaluated';
+  return String(result?.summary?.mixedScriptCount ?? 0);
 }
 
 function cleanedFilePayload(result) {
@@ -92,7 +98,7 @@ function printBatchHuman(results, dryRun) {
     const { summary } = result;
     const stream = result.mode === 'stream-detect-only' ? ' stream=yes' : '';
     const dry = dryRun ? ' dryRun=yes' : '';
-    process.stdout.write(`${result.path}: format=${result.format} controls=${summary.invisibleOrControlCount} confusables=${summary.confusableCount} mixedScripts=${summary.mixedScriptCount ?? 0} changed=${summary.changed ? 'yes' : 'no'} policy=${result.rewritePolicy}${stream}${dry}\n`);
+    process.stdout.write(`${result.path}: format=${result.format} controls=${summary.invisibleOrControlCount} confusables=${summary.confusableCount} mixedScripts=${mixedScriptDisplay(result)} changed=${summary.changed ? 'yes' : 'no'} policy=${result.rewritePolicy}${stream}${dry}\n`);
   }
 }
 
@@ -160,11 +166,11 @@ async function runSingleFile(filePath, args, options) {
       `Rewrite policy: ${result.rewritePolicy}`,
       `Invisible/control findings: ${summary.invisibleOrControlCount}`,
       `Confusable findings: ${summary.confusableCount}`,
-      `Mixed-script findings: ${summary.mixedScriptCount ?? 0}`,
+      `Mixed-script findings: ${mixedScriptDisplay(result)}`,
       `High-risk findings: ${summary.highRiskCount}`,
       `Text changed by conservative cleaning: ${summary.changed ? 'yes' : 'no'}`,
       options.dryRun ? 'Dry run: no cleaned payload emitted.' : '',
-      result.mode === 'stream-detect-only' ? 'Streaming mode: detect-only.' : '',
+      result.mode === 'stream-detect-only' ? 'Streaming mode: mixed-script token analysis is not evaluated.' : '',
       ''
     ].filter(Boolean).join('\n'));
   }
