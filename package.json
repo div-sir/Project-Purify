@@ -10,7 +10,8 @@
     "test": "node --test",
     "serve": "python3 -m http.server 4173",
     "scan": "node ./src/cli.js",
-    "update:confusables": "node ./scripts/update-confusables.mjs"
+    "update:confusables": "node ./scripts/update-confusables.mjs",
+    "build:extension": "node ./scripts/build-extension.mjs"
   },
   "description": "Detect suspicious Unicode text artifacts, explain them, and produce a controlled clean version.",
   "license": "MIT"
