@@ -9,6 +9,7 @@ export function normalizeReportOptions(options = {}) {
       removeZeroWidthJoiner: clean.removeZeroWidthJoiner === true,
       removeDirectionalControls: clean.removeDirectionalControls === true,
       removeVariationSelectors: clean.removeVariationSelectors === true,
+      removeTagCharacters: clean.removeTagCharacters === true,
       normalize: Object.prototype.hasOwnProperty.call(clean, 'normalize') ? clean.normalize : 'NFC'
     },
     confusables: {
