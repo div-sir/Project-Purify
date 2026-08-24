@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
-import fs from 'node:fs/promises';
 import process from 'node:process';
 import { buildReport } from './report.js';
-import { analyzeFiles } from './files.js';
+import { analyzeFile, analyzeFiles, DEFAULT_MAX_FILE_BYTES } from './files.js';
+import { discoverFiles } from './discovery.js';
+import { reportFailsSeverity, resultFailsSeverity, validateSeverity } from './policy.js';
 
 function usage() {
-  return `Project Purify CLI\n\nUsage:\n  project-purify --text "text" [--json]\n  project-purify --file path/to/file.txt [--json]\n  project-purify --batch a.txt b.md data.json [--json | --jsonl]\n  cat file.txt | project-purify [--json]\n\nOptions:\n  --text <text>       Analyze literal text.\n  --file <path>       Analyze one UTF-8 text file.\n  --batch <paths...>  Analyze multiple supported text, structured, or source files.\n  --json              Print complete JSON output.\n  --jsonl             Print one JSON object per batch input line.\n  --clean             Print only cleaned text for single-input mode.\n  --aggressive        Also remove ZWJ and variation selectors.\n  --help              Show this help.\n`;
+  return `Project Purify CLI\n\nUsage:\n  project-purify --text "text" [--json]\n  project-purify --file path/to/file.txt [--json]\n  project-purify --batch a.txt b.md data.json [--json | --jsonl]\n  project-purify --dir . [--include "**/*.js"] [--exclude "**/dist/**"]\n  cat file.txt | project-purify [--json]\n\nOptions:\n  --text <text>              Analyze literal text.\n  --file <path>              Analyze one supported UTF-8 file.\n  --batch <paths...>         Analyze multiple supported files.\n  --dir <path>               Discover and analyze supported files recursively.\n  --include <glob>           Directory include glob. Repeat as needed.\n  --exclude <glob>           Directory exclude glob. Repeat as needed.\n  --json                     Print complete JSON output.\n  --jsonl                    Print one JSON object per batch input line.\n  --clean                    Print only safe cleaned text for a single rewritable input.\n  --aggressive               Also remove ZWJ and variation selectors.\n  --dry-run                  Report changes without printing cleaned payloads.\n  --fail-on-severity <level> Exit 3 when low, medium, or high threshold is met.\n  --max-bytes <bytes>        In-memory per-file limit. Default: ${DEFAULT_MAX_FILE_BYTES}.\n  --stream                   Use detect-only streaming when plain/source files exceed --max-bytes.\n  --help                     Show this help.\n`;
 }
 
 function getValue(args, name) {
@@ -15,12 +16,28 @@ function getValue(args, name) {
   return args[index + 1] ?? null;
 }
 
+function getRepeatedValues(args, name) {
+  const values = [];
+  for (let i = 0; i < args.length; i += 1) {
+    if (args[i] === name && args[i + 1] !== undefined) values.push(args[i + 1]);
+  }
+  return values;
+}
+
 function getMultiValues(args, name) {
   const index = args.indexOf(name);
   if (index === -1) return null;
   const values = [];
   for (let i = index + 1; i < args.length && !args[i].startsWith('--'); i += 1) values.push(args[i]);
   return values;
+}
+
+function getPositiveInteger(args, name, fallback) {
+  const raw = getValue(args, name);
+  if (raw === null) return fallback;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`${name} requires a positive integer.`);
+  return value;
 }
 
 async function readStdin() {
@@ -36,34 +53,87 @@ function cleanOptions(aggressive) {
   };
 }
 
-async function runBatch(paths, args, aggressive) {
-  if (paths.length === 0) throw new Error('--batch requires at least one path.');
-  if (args.includes('--clean')) throw new Error('--clean is only available for single-input mode.');
-
-  const results = await analyzeFiles(paths, {
-    report: { clean: cleanOptions(aggressive) }
-  });
-
-  if (args.includes('--jsonl')) {
-    for (const result of results) process.stdout.write(`${JSON.stringify(result)}\n`);
-    return;
+function cleanedFilePayload(result) {
+  if (result.rewritePolicy === 'detect-only') {
+    throw new Error(`Clean output is unavailable for detect-only input: ${result.path}`);
   }
+  if (result.format === 'text') return result.report.transformations.cleanedText;
+  if (result.format === 'json') return `${JSON.stringify(result.structured.cleanedValue, null, 2)}\n`;
+  if (result.format === 'csv') return result.structured.cleanedText;
+  throw new Error(`Clean output is unavailable for format: ${result.format}`);
+}
 
-  if (args.includes('--json')) {
-    process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
-    return;
-  }
+function applySeverityExit(failed) {
+  if (failed && !process.exitCode) process.exitCode = 3;
+}
 
+function printBatchHuman(results, dryRun) {
   for (const result of results) {
     if (!result.ok) {
       process.stdout.write(`ERROR ${result.path}: ${result.error}\n`);
       continue;
     }
     const { summary } = result;
-    process.stdout.write(`${result.path}: format=${result.format} controls=${summary.invisibleOrControlCount} confusables=${summary.confusableCount} changed=${summary.changed ? 'yes' : 'no'} policy=${result.rewritePolicy}\n`);
+    const stream = result.mode === 'stream-detect-only' ? ' stream=yes' : '';
+    const dry = dryRun ? ' dryRun=yes' : '';
+    process.stdout.write(`${result.path}: format=${result.format} controls=${summary.invisibleOrControlCount} confusables=${summary.confusableCount} changed=${summary.changed ? 'yes' : 'no'} policy=${result.rewritePolicy}${stream}${dry}\n`);
+  }
+}
+
+async function runBatch(paths, args, options) {
+  if (paths.length === 0) throw new Error('Batch analysis requires at least one path.');
+  if (args.includes('--clean')) throw new Error('--clean is only available for single-input mode.');
+
+  const results = await analyzeFiles(paths, {
+    report: { clean: cleanOptions(options.aggressive) },
+    maxBytes: options.maxBytes,
+    streamLargeFiles: options.streamLargeFiles
+  });
+
+  if (args.includes('--jsonl')) {
+    for (const result of results) process.stdout.write(`${JSON.stringify(result)}\n`);
+  } else if (args.includes('--json')) {
+    process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
+  } else {
+    printBatchHuman(results, options.dryRun);
   }
 
   if (results.some((result) => !result.ok)) process.exitCode = 2;
+  if (options.failOnSeverity) {
+    applySeverityExit(results.some((result) => resultFailsSeverity(result, options.failOnSeverity)));
+  }
+}
+
+async function runSingleFile(filePath, args, options) {
+  const result = await analyzeFile(filePath, {
+    report: { clean: cleanOptions(options.aggressive) },
+    maxBytes: options.maxBytes,
+    streamLargeFiles: options.streamLargeFiles
+  });
+
+  if (args.includes('--clean')) {
+    if (options.dryRun) throw new Error('--dry-run cannot be combined with --clean.');
+    process.stdout.write(cleanedFilePayload(result));
+  } else if (args.includes('--json')) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else {
+    const { summary } = result;
+    process.stdout.write([
+      'Project Purify',
+      `Path: ${result.path}`,
+      `Format: ${result.format}`,
+      `Rewrite policy: ${result.rewritePolicy}`,
+      `Invisible/control findings: ${summary.invisibleOrControlCount}`,
+      `Confusable findings: ${summary.confusableCount}`,
+      `High-risk findings: ${summary.highRiskCount}`,
+      `Text changed by safe cleaning: ${summary.changed ? 'yes' : 'no'}`,
+      options.dryRun ? 'Dry run: no cleaned payload emitted.' : '',
+      result.mode === 'stream-detect-only' ? 'Streaming mode: detect-only.' : '',
+      ''
+    ].filter(Boolean).join('\n'));
+  }
+
+  if (options.failOnSeverity) applySeverityExit(resultFailsSeverity({ ok: true, ...result }, options.failOnSeverity));
 }
 
 async function main() {
@@ -76,21 +146,50 @@ async function main() {
   const textArg = getValue(args, '--text');
   const fileArg = getValue(args, '--file');
   const batchArgs = getMultiValues(args, '--batch');
-  const selectedInputs = [textArg !== null, fileArg !== null, batchArgs !== null].filter(Boolean).length;
+  const dirArg = getValue(args, '--dir');
+  const selectedInputs = [textArg !== null, fileArg !== null, batchArgs !== null, dirArg !== null].filter(Boolean).length;
 
   if (args.includes('--text') && textArg === null) throw new Error('--text requires a value.');
   if (args.includes('--file') && fileArg === null) throw new Error('--file requires a path.');
-  if (selectedInputs > 1) throw new Error('Use only one input source: --text, --file, --batch, or stdin.');
+  if (args.includes('--dir') && dirArg === null) throw new Error('--dir requires a path.');
+  if (selectedInputs > 1) throw new Error('Use only one input source: --text, --file, --batch, --dir, or stdin.');
+  if (args.includes('--json') && args.includes('--jsonl')) throw new Error('Use only one machine-readable format: --json or --jsonl.');
 
-  const aggressive = args.includes('--aggressive');
+  const failOnSeverity = getValue(args, '--fail-on-severity');
+  if (args.includes('--fail-on-severity') && failOnSeverity === null) throw new Error('--fail-on-severity requires low, medium, or high.');
+  if (failOnSeverity) validateSeverity(failOnSeverity);
+
+  const options = {
+    aggressive: args.includes('--aggressive'),
+    dryRun: args.includes('--dry-run'),
+    streamLargeFiles: args.includes('--stream'),
+    failOnSeverity,
+    maxBytes: getPositiveInteger(args, '--max-bytes', DEFAULT_MAX_FILE_BYTES)
+  };
+
   if (batchArgs !== null) {
-    await runBatch(batchArgs, args, aggressive);
+    await runBatch(batchArgs, args, options);
+    return;
+  }
+
+  if (dirArg !== null) {
+    const include = getRepeatedValues(args, '--include');
+    const exclude = getRepeatedValues(args, '--exclude');
+    const paths = await discoverFiles(dirArg, {
+      include: include.length > 0 ? include : undefined,
+      exclude
+    });
+    await runBatch(paths, args, options);
+    return;
+  }
+
+  if (fileArg !== null) {
+    await runSingleFile(fileArg, args, options);
     return;
   }
 
   let text;
   if (textArg !== null) text = textArg;
-  else if (fileArg !== null) text = await fs.readFile(fileArg, 'utf8');
   else if (!process.stdin.isTTY) text = await readStdin();
   else {
     process.stdout.write(usage());
@@ -98,30 +197,29 @@ async function main() {
     return;
   }
 
-  const report = buildReport(text, { clean: cleanOptions(aggressive) });
+  const report = buildReport(text, { clean: cleanOptions(options.aggressive) });
 
   if (args.includes('--clean')) {
+    if (options.dryRun) throw new Error('--dry-run cannot be combined with --clean.');
     process.stdout.write(report.transformations.cleanedText);
-    return;
-  }
-
-  if (args.includes('--json')) {
+  } else if (args.includes('--json')) {
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-    return;
+  } else {
+    const { summary } = report;
+    process.stdout.write([
+      'Project Purify',
+      `Invisible/control findings: ${summary.invisibleOrControlCount}`,
+      `Confusable findings: ${summary.confusableCount}`,
+      `High-risk findings: ${summary.highRiskCount}`,
+      `Text changed by safe cleaning: ${summary.changed ? 'yes' : 'no'}`,
+      options.dryRun ? 'Dry run: no cleaned payload emitted.' : '',
+      options.dryRun ? '' : 'Cleaned text:',
+      options.dryRun ? '' : report.transformations.cleanedText,
+      ''
+    ].filter((line, index, all) => line !== '' || index === all.length - 1).join('\n'));
   }
 
-  const { summary } = report;
-  process.stdout.write([
-    'Project Purify',
-    `Invisible/control findings: ${summary.invisibleOrControlCount}`,
-    `Confusable findings: ${summary.confusableCount}`,
-    `High-risk findings: ${summary.highRiskCount}`,
-    `Text changed by safe cleaning: ${summary.changed ? 'yes' : 'no'}`,
-    '',
-    'Cleaned text:',
-    report.transformations.cleanedText,
-    ''
-  ].join('\n'));
+  if (options.failOnSeverity) applySeverityExit(reportFailsSeverity(report, options.failOnSeverity));
 }
 
 main().catch((error) => {
