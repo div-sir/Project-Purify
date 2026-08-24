@@ -28,6 +28,25 @@ test('dry-run suppresses cleaned payload in human output', () => {
   assert.doesNotMatch(result.stdout, /Cleaned text:/);
 });
 
+test('language hint is exposed in human output', () => {
+  const result = run(['--text', 'AI生成文字', '--language', 'zh-Hant', '--dry-run']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Language hint: zh-Hant/);
+  assert.match(result.stdout, /Mixed-script findings: 0/);
+});
+
+test('unsupported language hint is rejected', () => {
+  const result = run(['--text', 'safe', '--language', 'xx-invalid']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unsupported language hint/);
+});
+
+test('mixed-script spoof can trigger severity policy', () => {
+  const result = run(['--text', 'pаypal', '--language', 'en', '--fail-on-severity', 'high', '--dry-run']);
+  assert.equal(result.status, 3, result.stderr);
+  assert.match(result.stdout, /Mixed-script findings: 1/);
+});
+
 test('directory mode discovers nested supported files', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'purify-cli-'));
   const nested = path.join(dir, 'nested');
