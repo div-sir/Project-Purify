@@ -50,7 +50,7 @@ Exit criteria: the same build and input produce a stable, explainable report fro
 
 ## v0.3 — File and Batch Analysis
 
-Status: in progress.
+Status: implemented in PR #1.
 
 - [x] TXT and Markdown file analysis.
 - [x] JSON text-field analysis without modifying non-string values.
@@ -59,26 +59,33 @@ Status: in progress.
 - [x] Directory recursion with include/exclude globs.
 - [x] Default exclusion of `.git` and `node_modules`.
 - [x] Batch JSON/JSONL reports.
-- [ ] Dry-run and fail-on-severity CLI options.
+- [x] Dry-run and fail-on-severity CLI options.
 - [x] File size limits.
-- [ ] Streaming for large files.
+- [x] Detect-only streaming for large plain-text and source files.
+- [x] Findings caps and a separate streaming byte ceiling.
 
-Exit criteria: Project Purify can scan repositories and document collections safely.
+Exit criteria: Project Purify can scan repositories and document collections safely without authorizing unsafe source-code rewrites.
 
 ## v0.4 — Web Forensics Workbench
 
-- [ ] Side-by-side original and cleaned diff.
-- [ ] Inline markers for invisible characters.
-- [ ] Finding filters by severity and category.
-- [ ] Confusable highlighting and skeleton preview.
-- [ ] Copy clean text and download report actions.
-- [ ] Drag-and-drop file analysis.
-- [ ] Local-only privacy indicator.
-- [ ] Responsive and accessible keyboard navigation.
+Status: implemented in PR #1; browser verification remains part of PR review.
 
-Exit criteria: a non-technical user can understand what changed and why.
+- [x] Side-by-side original and cleaned diff workspace.
+- [x] Inline markers for invisible characters.
+- [x] Finding filters by severity and category.
+- [x] Confusable annotation and skeleton preview.
+- [x] Copy clean text and download report actions.
+- [x] Drag-and-drop TXT/Markdown analysis.
+- [x] Local-only privacy indicator and no remote script dependency.
+- [x] Responsive layout and keyboard-accessible file drop target.
+- [x] Reusable workbench model with Node tests.
+- [x] Local-first HTML smoke tests.
+
+Exit criteria: a non-technical user can understand what changed and why without uploading text to a remote service.
 
 ## v0.5 — Browser Extension
+
+Status: next.
 
 - [ ] Chrome/Chromium Manifest V3 extension.
 - [ ] Scan selected text.
@@ -87,6 +94,7 @@ Exit criteria: a non-technical user can understand what changed and why.
 - [ ] Optional page-level suspicious-character indicator.
 - [ ] Firefox compatibility assessment.
 - [ ] No remote text upload by default.
+- [ ] Reuse the same scanner/report/workbench core instead of duplicating detection rules.
 
 Exit criteria: users can inspect copied web text without opening the full workbench.
 
