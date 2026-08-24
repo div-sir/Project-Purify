@@ -1,6 +1,6 @@
 {
   "name": "project-purify",
-  "version": "0.6.0-dev",
+  "version": "0.7.0-dev",
   "private": true,
   "type": "module",
   "exports": {
@@ -22,6 +22,8 @@
     "serve": "python3 -m http.server 4173",
     "scan": "node ./src/cli.js",
     "update:confusables": "node ./scripts/update-confusables.mjs",
+    "update:scripts": "node ./scripts/update-scripts.mjs",
+    "update:unicode-data": "npm run update:confusables && npm run update:scripts",
     "build:extension": "node ./scripts/build-extension.mjs"
   },
   "description": "Detect suspicious Unicode text artifacts, explain them, and produce a controlled clean version.",
@@ -30,6 +32,7 @@
     "security",
     "confusables",
     "zero-width",
+    "mixed-script",
     "text-forensics"
   ],
   "license": "MIT"
