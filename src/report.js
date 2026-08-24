@@ -1,7 +1,7 @@
 import { scanText, cleanText } from './scanner.js';
-import { detectConfusables, confusableSkeleton } from './confusables.js';
+import { detectConfusables, confusableSkeleton, getConfusablesMetadata } from './confusables.js';
 
-export const REPORT_SCHEMA_VERSION = '1.0.0';
+export const REPORT_SCHEMA_VERSION = '1.1.0';
 
 function countBy(items, key) {
   return items.reduce((acc, item) => {
@@ -47,12 +47,23 @@ export function buildReport(text, options = {}) {
   const cleanedText = cleanText(text, options.clean ?? {});
   const confusables = detectConfusables(text);
   const changes = diffText(text, cleanedText);
+  const confusablesData = getConfusablesMetadata();
 
   const severityCounts = countBy([...scan.findings, ...confusables], 'severity');
   const categoryCounts = countBy(scan.findings, 'category');
+  const limitations = [
+    'Unicode findings are text-level evidence only and do not prove AI authorship.'
+  ];
+
+  if (confusablesData.completeness !== 'full') {
+    limitations.push('This build uses the offline fallback confusables dataset. Run the pinned Unicode data generator for complete UTS #39 coverage.');
+  }
 
   return {
     schemaVersion: REPORT_SCHEMA_VERSION,
+    dataProvenance: {
+      confusables: confusablesData
+    },
     input: {
       utf16Length: text.length,
       codePointLength: [...text].length
@@ -74,9 +85,6 @@ export function buildReport(text, options = {}) {
       changes,
       confusableSkeleton: confusableSkeleton(text)
     },
-    limitations: [
-      'Unicode findings are text-level evidence only and do not prove AI authorship.',
-      'The confusable table is intentionally limited in this release and is not a complete Unicode confusables implementation.'
-    ]
+    limitations
   };
 }
