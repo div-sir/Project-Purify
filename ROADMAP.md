@@ -101,9 +101,11 @@ Status: implemented in PR #1; Chromium and Firefox runtime verification remains 
 - [x] Context-menu action for explicit selection analysis.
 - [x] On-demand visible-page scan through `activeTab`.
 - [x] Page-level finding badge summary.
-- [x] Exclude password fields from content-script inspection.
+- [x] Exclude password fields from inspection.
 - [x] No remote text transport API.
-- [x] No persistent broad `host_permissions` requirement.
+- [x] No persistent broad host permission or all-site content-script injection.
+- [x] Bound page/context text retained by the extension.
+- [x] Clear pending session text after use or popup-open failure.
 - [x] Reuse scanner/report/workbench/generated-data core at build time.
 - [x] Firefox API compatibility assessment.
 - [x] Firefox `background.scripts` fallback for current MV3 background differences.
@@ -134,7 +136,7 @@ Exit criteria: repositories can use Project Purify as a deterministic Unicode po
 
 ## v0.7 — Unicode Coverage and Internationalization
 
-Status: implemented in PR #1; full generated-data CI and browser runtime verification remain release gates.
+Status: implemented in PR #1; browser runtime verification remains a release gate.
 
 - [x] Add version-pinned Unicode 17.0.0 `Scripts.txt` generator and fallback runtime metadata.
 - [x] Add stronger same-token mixed-script analysis.
@@ -172,18 +174,21 @@ Exit criteria: reports can be independently identified, integrity-checked, repro
 
 ## v0.9 — Hardening
 
-Status: in progress in PR #1.
+Status: in progress in PR #1. Core Test workflow is green; cross-platform/runtime release gates remain.
 
-- [ ] Security and threat-model review.
-- [ ] Performance benchmark suite and regression budgets.
-- [ ] Unicode torture corpus.
-- [ ] Cross-platform CLI testing on Linux, macOS, and Windows.
-- [ ] Chromium extension runtime test matrix.
-- [ ] Firefox extension runtime test matrix.
-- [ ] Accessibility audit and regression checklist.
-- [ ] Documentation review.
-- [ ] API deprecation and compatibility policy.
-- [ ] Release-readiness checklist.
+- [x] Perform security and threat-model review and remediate identified default-policy/privacy issues.
+- [x] Add bounded, allowlisted Unicode-data download security controls.
+- [x] Add performance benchmark suite and regression budgets.
+- [x] Add Unicode torture corpus.
+- [ ] Complete cross-platform CLI verification on Linux, macOS, and Windows. Workflow is implemented; current Hardening matrix must pass.
+- [ ] Complete Chromium extension runtime matrix.
+- [ ] Complete Firefox extension runtime matrix.
+- [x] Add automated accessibility smoke checks and a manual audit checklist.
+- [ ] Complete manual assistive-technology/accessibility verification.
+- [x] Complete documentation consistency review for current version/schema/safety policy.
+- [x] Publish API deprecation and compatibility policy.
+- [x] Publish security policy and release-readiness checklist.
+- [x] Modernize GitHub Actions runtimes used by test, hardening, and reusable workflows.
 
 Exit criteria: no known critical correctness, security, privacy, portability, or accessibility defects remain before the release candidate.
 
@@ -195,7 +200,7 @@ Exit criteria: no known critical correctness, security, privacy, portability, or
 - [ ] Browser extension release.
 - [ ] npm release.
 - [ ] CI integration documentation.
-- [ ] Threat model and limitations documentation.
+- [x] Threat model and limitations documentation drafted before release.
 - [ ] Versioned changelog and release process.
 
 Exit criteria: Project Purify is suitable for routine personal and developer use.
@@ -209,5 +214,6 @@ These items are research tracks. They are not claims of current capability.
 - Integration with C2PA or cryptographic content provenance where applicable.
 - Detection of visually deceptive identifiers in source code.
 - IDE diagnostics backed by Project Purify's shared core.
+- Stateful mixed-script token analysis for large streamed inputs.
 
 The project will not convert these signals into an unsupported "AI-generated" probability score.
