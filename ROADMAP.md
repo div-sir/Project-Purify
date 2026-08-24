@@ -14,6 +14,7 @@ Project Purify MUST NOT claim that Unicode artifacts prove AI authorship. Findin
 6. Keep one shared detection core for CLI, web, extensions, and future editor integrations.
 7. Treat UTS #39 skeleton mappings as comparison data, not automatic proof that a character is suspicious.
 8. Treat mixed-script findings as policy signals and preserve legitimate multilingual writing through language-aware profiles.
+9. Treat evidence integrity, offset semantics, and policy configuration as part of the forensic result.
 
 ## v0.1 — MVP foundation
 
@@ -153,37 +154,44 @@ Exit criteria: broader Unicode coverage does not sacrifice ordinary multilingual
 
 ## v0.8 — Forensic Evidence and Reproducibility
 
-Status: next.
+Status: implemented in PR #1.
 
-- [ ] Add reproducible tool/build metadata to reports.
-- [ ] Add SHA-256 input/output hashes.
-- [ ] Add optional immutable audit bundle.
-- [ ] Publish report schema documentation.
-- [ ] Compare two reports deterministically.
-- [ ] Define explicit evidence limitations and confidence language.
-- [ ] Document UTF-16 versus code-point versus byte offsets for each output format.
+- [x] Add reproducible tool/build metadata to reports.
+- [x] Add normalized analysis options to reports.
+- [x] Add SHA-256 input, cleaned-output, and confusable-skeleton hashes.
+- [x] Add content-addressed, tamper-evident audit bundles.
+- [x] Add self-contained audit reproduction when input text is explicitly included.
+- [x] Compare two reports deterministically.
+- [x] Publish report schema documentation.
+- [x] Publish audit-bundle documentation.
+- [x] Define machine-readable attribution and confidence limitations.
+- [x] Document UTF-16 versus code-point versus byte offsets for each output format.
+- [x] Verify the synchronous SHA-256 implementation against known vectors and Node `crypto`.
 
-Exit criteria: reports can be independently reproduced and reviewed.
+Exit criteria: reports can be independently identified, integrity-checked, reproduced when the input is available, and compared without treating severity as authorship probability.
 
 ## v0.9 — Hardening
 
-- [ ] Security review.
-- [ ] Performance benchmark suite.
+Status: in progress in PR #1.
+
+- [ ] Security and threat-model review.
+- [ ] Performance benchmark suite and regression budgets.
 - [ ] Unicode torture corpus.
-- [ ] Cross-platform CLI testing.
+- [ ] Cross-platform CLI testing on Linux, macOS, and Windows.
 - [ ] Chromium extension runtime test matrix.
 - [ ] Firefox extension runtime test matrix.
-- [ ] Accessibility audit.
+- [ ] Accessibility audit and regression checklist.
 - [ ] Documentation review.
-- [ ] API deprecation policy.
+- [ ] API deprecation and compatibility policy.
+- [ ] Release-readiness checklist.
 
-Exit criteria: no known critical correctness, security, privacy, or accessibility defects.
+Exit criteria: no known critical correctness, security, privacy, portability, or accessibility defects remain before the release candidate.
 
 ## v1.0 — Stable Release
 
 - [ ] Stable scanner, cleaner, report, and CLI APIs.
 - [ ] Stable report schema with migration policy.
-- [ ] Web workbench release.
+- [ ] Web Workbench release.
 - [ ] Browser extension release.
 - [ ] npm release.
 - [ ] CI integration documentation.
