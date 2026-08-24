@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -5,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const UNICODE_VERSION = process.env.UNICODE_VERSION ?? '17.0.0';
 const SOURCE = `https://www.unicode.org/Public/${UNICODE_VERSION}/security/confusables.txt`;
 const OUTPUT = new URL('../src/generated/confusables-data.js', import.meta.url);
+const GENERATOR_VERSION = 1;
 
 function parseSequence(field) {
   return field.trim().split(/\s+/).filter(Boolean).map((hex) => String.fromCodePoint(Number.parseInt(hex, 16))).join('');
@@ -13,6 +15,8 @@ function parseSequence(field) {
 const response = await fetch(SOURCE);
 if (!response.ok) throw new Error(`Failed to fetch ${SOURCE}: ${response.status}`);
 const text = await response.text();
+const sourceSha256 = createHash('sha256').update(text, 'utf8').digest('hex');
+const sourceDate = text.match(/^#\s*Date:\s*(.+)$/m)?.[1]?.trim() ?? null;
 const entries = [];
 
 for (const line of text.split(/\r?\n/)) {
@@ -27,10 +31,21 @@ for (const line of text.split(/\r?\n/)) {
 }
 
 entries.sort((a, b) => a[0] - b[0]);
+const metadata = {
+  unicodeVersion: UNICODE_VERSION,
+  sourceUrl: SOURCE,
+  sourceSha256,
+  sourceDate,
+  generatorVersion: GENERATOR_VERSION,
+  entryCount: entries.length,
+  completeness: 'full'
+};
+
 const lines = [
   '// Generated file. Do not edit by hand.',
   `// Source: ${SOURCE}`,
-  `export const CONFUSABLES_UNICODE_VERSION = ${JSON.stringify(UNICODE_VERSION)};`,
+  `// SHA-256: ${sourceSha256}`,
+  `export const CONFUSABLES_METADATA = Object.freeze(${JSON.stringify(metadata, null, 2)});`,
   'export const GENERATED_CONFUSABLES = new Map([',
   ...entries.map(([cp, target]) => `  [0x${cp.toString(16).toUpperCase()}, ${JSON.stringify(target)}],`),
   ']);',
@@ -39,4 +54,5 @@ const lines = [
 
 await mkdir(dirname(fileURLToPath(OUTPUT)), { recursive: true });
 await writeFile(OUTPUT, lines.join('\n'), 'utf8');
-console.log(`Wrote ${entries.length} mappings to ${OUTPUT.pathname}`);
+console.log(`Wrote ${entries.length} mappings from Unicode ${UNICODE_VERSION}.`);
+console.log(`Source SHA-256: ${sourceSha256}`);
