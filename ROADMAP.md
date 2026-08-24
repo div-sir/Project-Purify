@@ -11,7 +11,8 @@ Project Purify MUST NOT claim that Unicode artifacts prove AI authorship. Findin
 3. Keep analysis deterministic and local-first.
 4. Separate detection from attribution.
 5. Prefer auditable reports over opaque scores.
-6. Keep the core library usable without the web UI.
+6. Keep one shared detection core for CLI, web, extensions, and future editor integrations.
+7. Treat UTS #39 skeleton mappings as comparison data, not automatic proof that a character is suspicious.
 
 ## v0.1 — MVP foundation
 
@@ -34,7 +35,10 @@ Status: implemented in PR #1.
 
 - [x] Define versioned JSON report schema.
 - [x] Add original-versus-cleaned change list.
-- [x] Add a practical confusable/homoglyph detector for common Latin-lookalike characters.
+- [x] Add confusable/homoglyph detection.
+- [x] Add UTS #39 skeleton generation.
+- [x] Separate raw skeleton mappings from reportable suspicious findings.
+- [x] Suppress ASCII source mappings by default to reduce full-data false positives.
 - [x] Add aggregate severity and category summaries.
 - [x] Add CLI input from arguments, stdin, and files.
 - [x] Add machine-readable JSON output.
@@ -60,6 +64,7 @@ Status: implemented in PR #1.
 - [x] Default exclusion of `.git` and `node_modules`.
 - [x] Batch JSON/JSONL reports.
 - [x] Dry-run and fail-on-severity CLI options.
+- [x] Stable automation exit-code categories.
 - [x] File size limits.
 - [x] Detect-only streaming for large plain-text and source files.
 - [x] Findings caps and a separate streaming byte ceiling.
@@ -68,9 +73,9 @@ Exit criteria: Project Purify can scan repositories and document collections saf
 
 ## v0.4 — Web Forensics Workbench
 
-Status: implemented in PR #1; browser verification remains part of PR review.
+Status: implemented in PR #1; browser runtime verification remains required before release.
 
-- [x] Side-by-side original and cleaned diff workspace.
+- [x] Side-by-side original and cleaned workspace.
 - [x] Inline markers for invisible characters.
 - [x] Finding filters by severity and category.
 - [x] Confusable annotation and skeleton preview.
@@ -85,50 +90,69 @@ Exit criteria: a non-technical user can understand what changed and why without 
 
 ## v0.5 — Browser Extension
 
-Status: next.
+Status: implemented in PR #1; Chromium and Firefox runtime verification remains required before release.
 
-- [ ] Chrome/Chromium Manifest V3 extension.
-- [ ] Scan selected text.
-- [ ] Scan editable fields before copy or submit.
-- [ ] Context-menu action: Purify selection.
-- [ ] Optional page-level suspicious-character indicator.
-- [ ] Firefox compatibility assessment.
-- [ ] No remote text upload by default.
-- [ ] Reuse the same scanner/report/workbench core instead of duplicating detection rules.
+- [x] Chrome/Chromium Manifest V3 extension shell.
+- [x] Analyze selected page or editable-field text.
+- [x] Local copy-event inspection.
+- [x] Local form-submit inspection without blocking submission.
+- [x] Context-menu action for explicit selection analysis.
+- [x] On-demand visible-page scan through `activeTab`.
+- [x] Page-level finding badge summary.
+- [x] Exclude password fields from content-script inspection.
+- [x] No remote text transport API.
+- [x] No persistent broad `host_permissions` requirement.
+- [x] Reuse scanner/report/workbench/generated-data core at build time.
+- [x] Firefox API compatibility assessment.
+- [x] Firefox `background.scripts` fallback for current MV3 background differences.
+- [x] Prefer `browser.*` with `chrome.*` fallback.
+- [x] Extension packaging and privacy-boundary tests.
 
-Exit criteria: users can inspect copied web text without opening the full workbench.
+Exit criteria: users can inspect selected or visible web text locally without opening the full workbench or granting a remote text service access.
 
 ## v0.6 — Developer Integrations
 
-- [ ] Publish an npm package.
-- [ ] Stable ESM API.
-- [ ] GitHub Actions reusable workflow.
-- [ ] pre-commit integration example.
-- [ ] CI exit codes based on severity policy.
-- [ ] SARIF output for code-scanning interfaces.
-- [ ] VS Code extension feasibility prototype.
+Status: in progress in PR #1.
 
-Exit criteria: repositories can automatically detect suspicious Unicode during CI.
+- [ ] Publish an npm package. Blocked until release verification and package-readiness review.
+- [x] Define one public ESM entry point through package `exports`.
+- [x] Add Node `>=20` engine contract.
+- [x] Add GitHub Actions reusable workflow.
+- [x] Add pre-commit integration guidance.
+- [x] Add CI exit codes based on severity policy.
+- [x] Add SARIF 2.1.0 output for code-scanning interfaces.
+- [x] Keep JSON/CSV field-local positions from being misreported as whole-file SARIF regions.
+- [x] Add developer integration documentation.
+- [x] Complete VS Code extension feasibility architecture.
+- [x] Add public API, workflow, SARIF, and CLI integration tests.
+
+Exit criteria: repositories can use Project Purify as a deterministic Unicode policy check. npm publication remains a release action, not a prerequisite for validating the integration design.
 
 ## v0.7 — Unicode Coverage and Internationalization
 
-- [ ] Generate character metadata from current Unicode data files.
-- [ ] Full confusable skeleton support.
-- [ ] Script-mixing analysis.
-- [ ] Language/script-aware false-positive reduction.
-- [ ] English, Traditional Chinese, and Japanese UI.
-- [ ] Explain legitimate ZWJ/ZWNJ and shaping use cases.
+Status: next after v0.6 validation.
 
-Exit criteria: broader coverage does not sacrifice legitimate multilingual text.
+- [ ] Generate broader character metadata from version-pinned Unicode data files.
+- [ ] Add stronger mixed-script analysis.
+- [ ] Add language/script-aware false-positive reduction.
+- [ ] Add identifier-focused security profile for source code.
+- [ ] Add English UI.
+- [ ] Add Traditional Chinese UI.
+- [ ] Add Japanese UI.
+- [ ] Explain legitimate ZWJ/ZWNJ and shaping use cases in context.
+- [ ] Add full-data false-positive corpus for ordinary multilingual prose.
+
+Exit criteria: broader Unicode coverage does not sacrifice legitimate multilingual text.
 
 ## v0.8 — Forensic Evidence and Reproducibility
 
-- [ ] Reproducible report metadata and tool version.
-- [ ] SHA-256 input/output hashes.
-- [ ] Optional immutable audit bundle.
-- [ ] Report schema documentation.
-- [ ] Comparison of two reports.
-- [ ] Explicit evidence limitations and confidence language.
+- [ ] Add reproducible tool/build metadata to reports.
+- [ ] Add SHA-256 input/output hashes.
+- [ ] Add optional immutable audit bundle.
+- [ ] Publish report schema documentation.
+- [ ] Compare two reports deterministically.
+- [ ] Define explicit evidence limitations and confidence language.
+- [ ] Document UTF-16 versus code-point versus byte offsets for each output format.
 
 Exit criteria: reports can be independently reproduced and reviewed.
 
@@ -138,11 +162,13 @@ Exit criteria: reports can be independently reproduced and reviewed.
 - [ ] Performance benchmark suite.
 - [ ] Unicode torture corpus.
 - [ ] Cross-platform CLI testing.
+- [ ] Chromium extension runtime test matrix.
+- [ ] Firefox extension runtime test matrix.
 - [ ] Accessibility audit.
 - [ ] Documentation review.
 - [ ] API deprecation policy.
 
-Exit criteria: no known critical correctness, security, or accessibility defects.
+Exit criteria: no known critical correctness, security, privacy, or accessibility defects.
 
 ## v1.0 — Stable Release
 
@@ -165,6 +191,6 @@ These items are research tracks. They are not claims of current capability.
 - Provenance metadata standards for generated content.
 - Integration with C2PA or cryptographic content provenance where applicable.
 - Detection of visually deceptive identifiers in source code.
-- IDE diagnostics for Unicode security issues.
+- IDE diagnostics backed by Project Purify's shared core.
 
 The project will not convert these signals into an unsupported "AI-generated" probability score.
