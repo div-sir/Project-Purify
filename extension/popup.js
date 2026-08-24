@@ -1,5 +1,6 @@
 import { createWorkbenchModel } from './core/workbench.js';
 
+const ext = globalThis.browser ?? globalThis.chrome;
 const input = document.querySelector('#input');
 const clean = document.querySelector('#clean');
 const findings = document.querySelector('#findings');
@@ -34,7 +35,7 @@ function render() {
     findings.append(li);
   }
 
-  chrome.runtime.sendMessage({
+  ext.runtime.sendMessage({
     type: 'purify:finding-summary',
     source: 'popup',
     count: model.findings.length,
@@ -43,10 +44,10 @@ function render() {
 }
 
 async function readPageSelection() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return '';
 
-  const [result] = await chrome.scripting.executeScript({
+  const [result] = await ext.scripting.executeScript({
     target: { tabId: tab.id },
     func: () => {
       const active = document.activeElement;
@@ -82,11 +83,11 @@ async function copyClean() {
 }
 
 async function loadPendingContextSelection() {
-  const { pendingText, pendingSource } = await chrome.storage.session.get(['pendingText', 'pendingSource']);
+  const { pendingText, pendingSource } = await ext.storage.session.get(['pendingText', 'pendingSource']);
   if (!pendingText) return false;
   input.value = pendingText;
   status.textContent = pendingSource === 'context-menu' ? 'Loaded context-menu selection.' : 'Loaded pending selection.';
-  await chrome.storage.session.remove(['pendingText', 'pendingSource']);
+  await ext.storage.session.remove(['pendingText', 'pendingSource']);
   render();
   return true;
 }
