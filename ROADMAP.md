@@ -53,9 +53,11 @@ Exit criteria: the same build and input produce a stable, explainable report fro
 Status: in progress.
 
 - [x] TXT and Markdown file analysis.
-- [ ] JSON and CSV text-field analysis without damaging syntax.
-- [ ] Source-code safe mode.
-- [ ] Directory recursion with include/exclude globs.
+- [x] JSON text-field analysis without modifying non-string values.
+- [x] CSV field analysis with quoted-field parsing and safe serialization.
+- [x] Source-code safe mode with detect-only rewrite policy.
+- [x] Directory recursion with include/exclude globs.
+- [x] Default exclusion of `.git` and `node_modules`.
 - [x] Batch JSON/JSONL reports.
 - [ ] Dry-run and fail-on-severity CLI options.
 - [x] File size limits.
