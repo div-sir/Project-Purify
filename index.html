@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Project Purify</title>
+  <style>
+    :root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color-scheme: light dark; }
+    body { margin: 0; background: Canvas; color: CanvasText; }
+    main { max-width: 1080px; margin: 0 auto; padding: 40px 20px 64px; }
+    h1 { margin-bottom: 6px; }
+    .sub { opacity: .72; margin-top: 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    textarea, pre { width: 100%; box-sizing: border-box; min-height: 260px; border: 1px solid color-mix(in srgb, CanvasText 18%, transparent); border-radius: 14px; padding: 14px; background: color-mix(in srgb, Canvas 96%, CanvasText 4%); }
+    textarea { resize: vertical; font: inherit; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; margin: 14px 0 20px; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); cursor:pointer; }
+    .stats { display:flex; gap:10px; margin: 10px 0 18px; flex-wrap:wrap; }
+    .pill { padding:6px 10px; border-radius:999px; background:color-mix(in srgb, CanvasText 9%, transparent); }
+    table { width:100%; border-collapse: collapse; margin-top:18px; }
+    th, td { text-align:left; padding:9px 8px; border-bottom:1px solid color-mix(in srgb, CanvasText 14%, transparent); vertical-align: top; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Project Purify</h1>
+  <p class="sub">找出文字中的隱形 Unicode / format-control 字元，標示位置，並輸出純淨版本。</p>
+
+  <div class="grid">
+    <section>
+      <h2>原始文字</h2>
+      <textarea id="input" placeholder="貼上 AI 工具、網頁或文件中的文字…"></textarea>
+    </section>
+    <section>
+      <h2>純淨版本</h2>
+      <textarea id="clean" readonly></textarea>
+    </section>
+  </div>
+
+  <div class="toolbar">
+    <button id="scan">掃描</button>
+    <button id="copy">複製純淨文字</button>
+    <button id="sample">載入測試樣本</button>
+  </div>
+
+  <div class="stats">
+    <span class="pill" id="count">Detected: 0</span>
+    <span class="pill" id="high">High risk: 0</span>
+  </div>
+
+  <h2>可視化</h2>
+  <pre id="visual"></pre>
+
+  <h2>偵測結果</h2>
+  <table>
+    <thead><tr><th>位置</th><th>字元</th><th>類型</th><th>風險</th><th>Context</th></tr></thead>
+    <tbody id="results"></tbody>
+  </table>
+
+  <p class="sub">注意：發現隱形字元不等於文字一定由 AI 生成。它只表示內容含有不可見或格式控制 Unicode 字元。</p>
+</main>
+<script type="module">
+  import { scanText, cleanText, visualizeText } from './src/scanner.js';
+  const input = document.querySelector('#input');
+  const clean = document.querySelector('#clean');
+  const visual = document.querySelector('#visual');
+  const results = document.querySelector('#results');
+  const count = document.querySelector('#count');
+  const high = document.querySelector('#high');
+
+  function render() {
+    const text = input.value;
+    const report = scanText(text);
+    clean.value = cleanText(text);
+    visual.textContent = visualizeText(text);
+    count.textContent = `Detected: ${report.count}`;
+    high.textContent = `High risk: ${report.highRiskCount}`;
+    results.innerHTML = report.findings.map((f) => `
+      <tr>
+        <td><code>${f.charIndex}</code></td>
+        <td><code>${f.label}</code></td>
+        <td>${f.name}</td>
+        <td>${f.severity}</td>
+        <td><code>${escapeHtml(f.context)}</code></td>
+      </tr>`).join('');
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  document.querySelector('#scan').addEventListener('click', render);
+  document.querySelector('#copy').addEventListener('click', async () => {
+    await navigator.clipboard.writeText(clean.value);
+  });
+  document.querySelector('#sample').addEventListener('click', () => {
+    input.value = '這是一段\u200B含有零寬空白的文字。\n正常 emoji：👨‍👩‍👧‍👦\nBidi 控制：abc\u202Edef';
+    render();
+  });
+  input.addEventListener('input', render);
+  render();
+</script>
+</body>
+</html>
