@@ -42,7 +42,16 @@ export function classifyCodePoint(cp) {
 
   if (inRanges(cp, VARIATION_SELECTORS)) return { name: 'Variation Selector', codePoint: cp, label: codeLabel(cp), category: 'variation-selector', severity: 'low', remove: false, reason: 'Variation selectors are invisible but may select a required glyph presentation.', remediation: 'Preserve by default. Remove only when presentation differences are not needed.' };
 
-  if (cp >= 0xE0000 && cp <= 0xE007F) return { name: 'Unicode Tag Character', codePoint: cp, label: codeLabel(cp), category: 'tag-character', severity: 'high', remove: true, reason: 'Tag characters can carry hidden metadata-like text.', remediation: 'Remove unless a documented Unicode tag sequence is intentionally required.' };
+  if (cp >= 0xE0000 && cp <= 0xE007F) return {
+    name: 'Unicode Tag Character',
+    codePoint: cp,
+    label: codeLabel(cp),
+    category: 'tag-character',
+    severity: 'high',
+    remove: false,
+    reason: 'Tag characters can carry hidden metadata-like text, but standardized emoji tag sequences can also use them legitimately.',
+    remediation: 'Preserve by default. Remove only after confirming that the tag sequence is not required.'
+  };
 
   return null;
 }
@@ -78,6 +87,7 @@ function shouldRemove(classification, cp, options) {
   if (cp === 0x200D) return options.removeZeroWidthJoiner;
   if (cp === 0x200E || cp === 0x200F || classification.category === 'bidi-control') return options.removeDirectionalControls;
   if (classification.category === 'variation-selector') return options.removeVariationSelectors;
+  if (classification.category === 'tag-character') return options.removeTagCharacters;
   return classification.remove;
 }
 
@@ -87,13 +97,15 @@ export function cleanText(text, options = {}) {
     removeZeroWidthJoiner = false,
     removeDirectionalControls = false,
     removeVariationSelectors = false,
+    removeTagCharacters = false,
     normalize = 'NFC'
   } = options;
   const policy = {
     removeZeroWidthNonJoiner,
     removeZeroWidthJoiner,
     removeDirectionalControls,
-    removeVariationSelectors
+    removeVariationSelectors,
+    removeTagCharacters
   };
   let out = '';
 
