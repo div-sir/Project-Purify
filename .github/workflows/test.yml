@@ -26,3 +26,24 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  unicode-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate pinned Unicode confusables data
+        run: npm run update:confusables
+
+      - name: Verify full generated dataset
+        run: node --input-type=module -e "import('./src/generated/confusables-data.js').then(({CONFUSABLES_METADATA}) => { if (CONFUSABLES_METADATA.completeness !== 'full' || !CONFUSABLES_METADATA.sourceSha256) process.exit(1); console.log(CONFUSABLES_METADATA); })"
+
+      - name: Run tests with generated Unicode data
+        run: npm test
