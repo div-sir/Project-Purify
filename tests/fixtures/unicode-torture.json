@@ -1,0 +1,74 @@
+[
+  {
+    "name": "supplementary emoji before hidden control",
+    "text": "😀\u200Bz"
+  },
+  {
+    "name": "family emoji ZWJ sequence",
+    "text": "👨‍👩‍👧‍👦"
+  },
+  {
+    "name": "emoji variation selector",
+    "text": "✈️"
+  },
+  {
+    "name": "supplementary variation selector",
+    "text": "漢\udb40\udd00"
+  },
+  {
+    "name": "Persian ZWNJ shaping",
+    "text": "می\u200Cخواهم"
+  },
+  {
+    "name": "Arabic and Latin ordinary prose",
+    "text": "OpenAI اختبار Unicode"
+  },
+  {
+    "name": "Japanese mixed writing systems",
+    "text": "AI生成テスト日本語カタカナ"
+  },
+  {
+    "name": "Korean mixed prose",
+    "text": "AI모델테스트"
+  },
+  {
+    "name": "Latin Cyrillic spoof",
+    "text": "pаypal"
+  },
+  {
+    "name": "Greek Latin spoof",
+    "text": "AΑA"
+  },
+  {
+    "name": "bidi override",
+    "text": "abc\u202Edef\u202Cghi"
+  },
+  {
+    "name": "bidi isolate",
+    "text": "abc\u2067אבג\u2069def"
+  },
+  {
+    "name": "combining mark stack",
+    "text": "a\u0301\u0327\u0308"
+  },
+  {
+    "name": "zero width and word joiner artifacts",
+    "text": "a\u200Bb\u2060c\ufeffd\u00ade"
+  },
+  {
+    "name": "lone high surrogate",
+    "text": "before\ud800after"
+  },
+  {
+    "name": "lone low surrogate",
+    "text": "before\udc00after"
+  },
+  {
+    "name": "null and control characters",
+    "text": "a\u0000b\u0001c\td\ne"
+  },
+  {
+    "name": "long repeated combining input",
+    "text": "x\u0301\u0301\u0301\u0301\u0301\u0301\u0301\u0301\u0301\u0301y"
+  }
+]
