@@ -1,24 +1,17 @@
 const RULES = [
-  { name: 'Zero Width Space', code: 0x200B, severity: 'high', remove: true },
-  { name: 'Zero Width Non-Joiner', code: 0x200C, severity: 'medium', remove: true },
-  { name: 'Zero Width Joiner', code: 0x200D, severity: 'medium', remove: false },
-  { name: 'Left-to-Right Mark', code: 0x200E, severity: 'high', remove: true },
-  { name: 'Right-to-Left Mark', code: 0x200F, severity: 'high', remove: true },
-  { name: 'Word Joiner', code: 0x2060, severity: 'high', remove: true },
-  { name: 'Zero Width No-Break Space / BOM', code: 0xFEFF, severity: 'high', remove: true },
-  { name: 'Soft Hyphen', code: 0x00AD, severity: 'medium', remove: true },
-  { name: 'Mongolian Vowel Separator', code: 0x180E, severity: 'medium', remove: true }
+  { name: 'Zero Width Space', code: 0x200B, severity: 'high', remove: true, reason: 'Invisible spacing can change text comparison or matching.', remediation: 'Remove unless the source format explicitly requires it.' },
+  { name: 'Zero Width Non-Joiner', code: 0x200C, severity: 'medium', remove: true, reason: 'This character can affect shaping and text comparison.', remediation: 'Remove in ordinary prose. Preserve when the writing system requires it.' },
+  { name: 'Zero Width Joiner', code: 0x200D, severity: 'medium', remove: false, reason: 'This character is invisible but can be required for emoji or script shaping.', remediation: 'Preserve by default. Remove only in aggressive cleaning when shaping loss is acceptable.' },
+  { name: 'Left-to-Right Mark', code: 0x200E, severity: 'high', remove: true, reason: 'Directional marks can alter visual ordering without visible content.', remediation: 'Remove unless bidirectional layout is intentional.' },
+  { name: 'Right-to-Left Mark', code: 0x200F, severity: 'high', remove: true, reason: 'Directional marks can alter visual ordering without visible content.', remediation: 'Remove unless bidirectional layout is intentional.' },
+  { name: 'Word Joiner', code: 0x2060, severity: 'high', remove: true, reason: 'Invisible joining can change wrapping and text comparison.', remediation: 'Remove in ordinary prose unless non-breaking behavior is required.' },
+  { name: 'Zero Width No-Break Space / BOM', code: 0xFEFF, severity: 'high', remove: true, reason: 'An embedded BOM is usually unnecessary and can affect parsing or comparison.', remediation: 'Remove embedded BOM characters. Preserve file-level encoding metadata separately.' },
+  { name: 'Soft Hyphen', code: 0x00AD, severity: 'medium', remove: true, reason: 'Soft hyphen is normally invisible and can alter search or token matching.', remediation: 'Remove unless discretionary hyphenation is intentionally required.' },
+  { name: 'Mongolian Vowel Separator', code: 0x180E, severity: 'medium', remove: true, reason: 'This deprecated-format character can be invisible in many renderers.', remediation: 'Remove unless processing legacy Mongolian text that requires it.' }
 ];
 
-const BIDI_RANGES = [
-  [0x202A, 0x202E],
-  [0x2066, 0x2069]
-];
-
-const VARIATION_SELECTORS = [
-  [0xFE00, 0xFE0F],
-  [0xE0100, 0xE01EF]
-];
+const BIDI_RANGES = [[0x202A, 0x202E], [0x2066, 0x2069]];
+const VARIATION_SELECTORS = [[0xFE00, 0xFE0F], [0xE0100, 0xE01EF]];
 
 function inRanges(cp, ranges) {
   return ranges.some(([a, b]) => cp >= a && cp <= b);
@@ -28,42 +21,19 @@ function codeLabel(cp) {
   return `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`;
 }
 
+function stableId(kind, label, charIndex) {
+  return `${kind}:${label}:${charIndex}`;
+}
+
 export function classifyCodePoint(cp) {
   const exact = RULES.find((r) => r.code === cp);
   if (exact) return { ...exact, codePoint: cp, label: codeLabel(cp), category: 'format-control' };
 
-  if (inRanges(cp, BIDI_RANGES)) {
-    return {
-      name: 'Bidirectional Control',
-      codePoint: cp,
-      label: codeLabel(cp),
-      category: 'bidi-control',
-      severity: 'high',
-      remove: true
-    };
-  }
+  if (inRanges(cp, BIDI_RANGES)) return { name: 'Bidirectional Control', codePoint: cp, label: codeLabel(cp), category: 'bidi-control', severity: 'high', remove: true, reason: 'Bidirectional controls can reorder visible text and obscure the logical character sequence.', remediation: 'Remove unless explicit bidirectional control is required and reviewed.' };
 
-  if (inRanges(cp, VARIATION_SELECTORS)) {
-    return {
-      name: 'Variation Selector',
-      codePoint: cp,
-      label: codeLabel(cp),
-      category: 'variation-selector',
-      severity: 'low',
-      remove: false
-    };
-  }
+  if (inRanges(cp, VARIATION_SELECTORS)) return { name: 'Variation Selector', codePoint: cp, label: codeLabel(cp), category: 'variation-selector', severity: 'low', remove: false, reason: 'Variation selectors are invisible but may select a required glyph presentation.', remediation: 'Preserve by default. Remove only when presentation differences are not needed.' };
 
-  if (cp >= 0xE0000 && cp <= 0xE007F) {
-    return {
-      name: 'Unicode Tag Character',
-      codePoint: cp,
-      label: codeLabel(cp),
-      category: 'tag-character',
-      severity: 'high',
-      remove: true
-    };
-  }
+  if (cp >= 0xE0000 && cp <= 0xE007F) return { name: 'Unicode Tag Character', codePoint: cp, label: codeLabel(cp), category: 'tag-character', severity: 'high', remove: true, reason: 'Tag characters can carry hidden metadata-like text.', remediation: 'Remove unless a documented Unicode tag sequence is intentionally required.' };
 
   return null;
 }
@@ -79,6 +49,8 @@ export function scanText(text) {
     if (classification) {
       findings.push({
         ...classification,
+        id: stableId('unicode', classification.label, charIndex),
+        type: 'unicode',
         char: ch,
         utf16Index,
         charIndex,
@@ -89,42 +61,20 @@ export function scanText(text) {
     charIndex += 1;
   }
 
-  return {
-    findings,
-    count: findings.length,
-    highRiskCount: findings.filter((f) => f.severity === 'high').length
-  };
+  return { findings, count: findings.length, highRiskCount: findings.filter((f) => f.severity === 'high').length };
 }
 
 export function cleanText(text, options = {}) {
-  const {
-    removeZeroWidthJoiner = false,
-    removeVariationSelectors = false,
-    normalize = 'NFC'
-  } = options;
-
+  const { removeZeroWidthJoiner = false, removeVariationSelectors = false, normalize = 'NFC' } = options;
   let out = '';
+
   for (const ch of text) {
     const cp = ch.codePointAt(0);
     const c = classifyCodePoint(cp);
-    if (!c) {
-      out += ch;
-      continue;
-    }
-
-    if (cp === 0x200D && !removeZeroWidthJoiner) {
-      out += ch;
-      continue;
-    }
-
-    if (c.category === 'variation-selector' && !removeVariationSelectors) {
-      out += ch;
-      continue;
-    }
-
-    if (!c.remove && !(cp === 0x200D && removeZeroWidthJoiner) && !(c.category === 'variation-selector' && removeVariationSelectors)) {
-      out += ch;
-    }
+    if (!c) { out += ch; continue; }
+    if (cp === 0x200D && !removeZeroWidthJoiner) { out += ch; continue; }
+    if (c.category === 'variation-selector' && !removeVariationSelectors) { out += ch; continue; }
+    if (!c.remove && !(cp === 0x200D && removeZeroWidthJoiner) && !(c.category === 'variation-selector' && removeVariationSelectors)) out += ch;
   }
 
   return normalize ? out.normalize(normalize) : out;
