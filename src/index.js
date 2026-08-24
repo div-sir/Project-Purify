@@ -7,3 +7,4 @@ export { analyzeJsonText, analyzeCsvText, parseCsv, serializeCsv } from './struc
 export { discoverFiles, globToRegExp } from './discovery.js';
 export { createWorkbenchModel, filterFindings, annotateText } from './workbench.js';
 export { reportFailsSeverity, resultFailsSeverity, severityAtLeast, validateSeverity, VALID_SEVERITIES } from './policy.js';
+export { reportToSarif, fileResultToSarif, batchResultsToSarif } from './sarif.js';
