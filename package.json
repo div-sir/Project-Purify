@@ -22,6 +22,7 @@
     "serve": "python3 -m http.server 4173",
     "scan": "node ./src/cli.js",
     "benchmark": "node ./scripts/benchmark.mjs",
+    "check:release-metadata": "node ./scripts/check-release-metadata.mjs",
     "update:confusables": "node ./scripts/update-confusables.mjs",
     "update:scripts": "node ./scripts/update-scripts.mjs",
     "update:unicode-data": "npm run update:confusables && npm run update:scripts",
