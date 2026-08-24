@@ -7,6 +7,8 @@ const IDENTIFIER_START = /[$_\p{ID_Start}]/u;
 const IDENTIFIER_CONTINUE = /[$_\u200C\u200D\p{ID_Continue}]/u;
 const IGNORED_SCRIPTS = new Set(['Common', 'Inherited', 'Unknown', 'Other']);
 
+export const VALID_LANGUAGE_HINTS = Object.freeze(['auto', 'en', 'zh-Hant', 'zh', 'ja', 'ko', 'ar']);
+
 const RISKY_PAIRS = [
   ['Latin', 'Cyrillic'],
   ['Latin', 'Greek'],
@@ -21,10 +23,12 @@ const LANGUAGE_ALLOWED = {
     new Set(['Latin', 'Han', 'Bopomofo']),
     new Set(['Latin', 'Han', 'Hangul'])
   ],
+  en: [new Set(['Latin'])],
   ja: [new Set(['Latin', 'Han', 'Hiragana', 'Katakana'])],
   'zh-Hant': [new Set(['Latin', 'Han', 'Bopomofo'])],
   zh: [new Set(['Latin', 'Han', 'Bopomofo'])],
-  ko: [new Set(['Latin', 'Han', 'Hangul'])]
+  ko: [new Set(['Latin', 'Han', 'Hangul'])],
+  ar: [new Set(['Arabic']), new Set(['Latin'])]
 };
 
 function stableId(charIndex, scripts) {
@@ -35,9 +39,15 @@ function isSubset(values, allowed) {
   return values.every((value) => allowed.has(value));
 }
 
+export function validateLanguageHint(languageHint) {
+  if (!VALID_LANGUAGE_HINTS.includes(languageHint)) {
+    throw new Error(`Unsupported language hint: ${languageHint}. Expected one of: ${VALID_LANGUAGE_HINTS.join(', ')}.`);
+  }
+  return languageHint;
+}
+
 function allowedByLanguage(scripts, languageHint) {
-  const profiles = LANGUAGE_ALLOWED[languageHint] ?? LANGUAGE_ALLOWED.auto;
-  return profiles.some((allowed) => isSubset(scripts, allowed));
+  return LANGUAGE_ALLOWED[languageHint].some((allowed) => isSubset(scripts, allowed));
 }
 
 function riskyPairsFor(scripts) {
@@ -75,7 +85,7 @@ function analyzeToken(token, position, options) {
   const scripts = scriptsInText(token);
   if (scripts.length <= 1) return null;
 
-  const languageHint = options.languageHint ?? 'auto';
+  const languageHint = validateLanguageHint(options.languageHint ?? 'auto');
   const riskyPairs = riskyPairsFor(scripts);
   const languageAllowed = allowedByLanguage(scripts, languageHint);
   const strictMixedScript = options.strictMixedScript === true;
@@ -156,16 +166,17 @@ function collectTokens(text, mode) {
 
 export function analyzeScripts(text, options = {}) {
   const profile = options.profile ?? 'prose';
+  const languageHint = validateLanguageHint(options.languageHint ?? 'auto');
   const tokens = collectTokens(text, profile === 'identifier' ? 'identifier' : 'prose');
   const findings = [];
   for (const item of tokens) {
-    const finding = analyzeToken(item.token, item, { ...options, profile });
+    const finding = analyzeToken(item.token, item, { ...options, profile, languageHint });
     if (finding) findings.push(finding);
   }
 
   return {
     profile,
-    languageHint: options.languageHint ?? 'auto',
+    languageHint,
     tokensAnalyzed: tokens.length,
     scriptsUsed: scriptsInText(text),
     findings,
