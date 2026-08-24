@@ -5,7 +5,9 @@ export function normalizeReportOptions(options = {}) {
 
   return {
     clean: {
+      removeZeroWidthNonJoiner: clean.removeZeroWidthNonJoiner === true,
       removeZeroWidthJoiner: clean.removeZeroWidthJoiner === true,
+      removeDirectionalControls: clean.removeDirectionalControls === true,
       removeVariationSelectors: clean.removeVariationSelectors === true,
       normalize: Object.prototype.hasOwnProperty.call(clean, 'normalize') ? clean.normalize : 'NFC'
     },
