@@ -1,0 +1,32 @@
+[
+  {
+    "name": "traditional-chinese",
+    "text": "這是一段正常的繁體中文文字。",
+    "expectedClean": "這是一段正常的繁體中文文字。"
+  },
+  {
+    "name": "japanese",
+    "text": "これは通常の日本語テキストです。",
+    "expectedClean": "これは通常の日本語テキストです。"
+  },
+  {
+    "name": "arabic",
+    "text": "هذا نص عربي عادي.",
+    "expectedClean": "هذا نص عربي عادي."
+  },
+  {
+    "name": "emoji-zwj",
+    "text": "Family: 👨‍👩‍👧‍👦",
+    "expectedClean": "Family: 👨‍👩‍👧‍👦"
+  },
+  {
+    "name": "hidden-control",
+    "text": "hello​world",
+    "expectedClean": "helloworld"
+  },
+  {
+    "name": "mixed-script-confusable",
+    "text": "pаypal",
+    "expectedSkeleton": "paypal"
+  }
+]
