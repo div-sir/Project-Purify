@@ -52,3 +52,24 @@ test('clean output is refused for detect-only source files', async () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /detect-only input/);
 });
+
+test('SARIF output is machine-readable and preserves severity exit code', () => {
+  const result = run(['--text', 'A\u200BB', '--sarif', '--fail-on-severity', 'high']);
+  assert.equal(result.status, 3, result.stderr);
+  const sarif = JSON.parse(result.stdout);
+  assert.equal(sarif.version, '2.1.0');
+  assert.equal(sarif.runs[0].results.length, 1);
+  assert.equal(sarif.runs[0].results[0].level, 'error');
+});
+
+test('directory SARIF contains findings from discovered files', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'purify-cli-'));
+  const file = path.join(dir, 'README.md');
+  await fs.writeFile(file, 'A\u200BB', 'utf8');
+
+  const result = run(['--dir', dir, '--sarif']);
+  assert.equal(result.status, 0, result.stderr);
+  const sarif = JSON.parse(result.stdout);
+  assert.equal(sarif.runs[0].results.length, 1);
+  assert.equal(sarif.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri, file);
+});
