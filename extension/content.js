@@ -1,5 +1,6 @@
+const ext = globalThis.browser ?? globalThis.chrome;
 const MAX_EVENT_TEXT = 1024 * 1024;
-const corePromise = import(chrome.runtime.getURL('core/workbench.js')).catch(() => null);
+const corePromise = import(ext.runtime.getURL('core/workbench.js')).catch(() => null);
 
 function selectedEditableText() {
   const active = document.activeElement;
@@ -37,7 +38,7 @@ async function inspect(text, source) {
   const count = model.findings.length;
   if (count === 0) return;
 
-  chrome.runtime.sendMessage({
+  ext.runtime.sendMessage({
     type: 'purify:finding-summary',
     source,
     count,
