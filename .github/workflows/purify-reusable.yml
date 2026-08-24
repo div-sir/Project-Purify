@@ -49,17 +49,17 @@ jobs:
 
     steps:
       - name: Checkout caller repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Checkout Project Purify
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: div-sir/Project-Purify
           ref: ${{ inputs.purify-ref }}
           path: .project-purify
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
 
