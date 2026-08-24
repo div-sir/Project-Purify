@@ -6,7 +6,7 @@ Project Purify is a Unicode text-forensics toolkit. It detects invisible, format
 
 ## Current status
 
-`v0.2.0-dev` is under active development.
+`v0.2` Text Forensics Core is implemented in PR #1. `v0.3` File and Batch Analysis is now in progress.
 
 Implemented:
 
@@ -15,13 +15,15 @@ Implemented:
 - Unicode tag character detection.
 - BOM and soft-hyphen detection.
 - Safe cleaning with ZWJ and variation-selector preservation by default.
-- Common Greek/Cyrillic Latin-lookalike detection.
-- Confusable skeleton generation.
-- Versioned JSON forensic reports.
+- Unicode confusable skeleton support through a generated-data runtime module.
+- Stable finding IDs, reasons, and remediation guidance.
+- Versioned JSON forensic reports with Unicode data provenance.
 - Original-versus-cleaned change records.
-- CLI input from literal text, UTF-8 files, or stdin.
+- CLI input from literal text, UTF-8 files, stdin, or file batches.
+- TXT and Markdown batch analysis with JSON/JSONL output.
+- Multilingual fixtures and deterministic property-style tests.
 - Browser-based MVP UI.
-- Node test suite.
+- GitHub Actions tests for Node 20 and 22.
 
 See [ROADMAP.md](./ROADMAP.md) for the full path to v1.0.
 
@@ -55,7 +57,7 @@ Analyze literal text:
 npm run scan -- --text "hello​world"
 ```
 
-Analyze a file:
+Analyze one file:
 
 ```bash
 npm run scan -- --file ./sample.txt
@@ -67,7 +69,19 @@ Analyze stdin:
 cat sample.txt | npm run scan -- --json
 ```
 
-Print only cleaned text:
+Analyze multiple TXT/Markdown files:
+
+```bash
+npm run scan -- --batch ./a.txt ./README.md --json
+```
+
+Emit one machine-readable record per input:
+
+```bash
+npm run scan -- --batch ./a.txt ./b.md --jsonl
+```
+
+Print only cleaned text for one input:
 
 ```bash
 npm run scan -- --file ./sample.txt --clean
@@ -80,6 +94,28 @@ npm run scan -- --file ./sample.txt --clean --aggressive
 ```
 
 Use aggressive mode only when loss of shaping or emoji-variation information is acceptable.
+
+## Unicode confusables data
+
+The runtime imports `src/generated/confusables-data.js`.
+
+The repository contains a small offline fallback dataset so Project Purify remains usable without network access. Generate the complete pinned Unicode 17.0.0 UTS #39 mapping with:
+
+```bash
+npm run update:confusables
+```
+
+The generator records:
+
+- Unicode version.
+- Source URL.
+- Source file date when available.
+- SHA-256 of the downloaded source.
+- Generator version.
+- Mapping entry count.
+- Dataset completeness.
+
+GitHub Actions regenerates the pinned dataset and verifies that full-data mode includes integrity metadata.
 
 ## Library API
 
@@ -105,6 +141,7 @@ console.log(JSON.stringify(report, null, 2));
 The report contains:
 
 - Schema version.
+- Unicode data provenance.
 - Input lengths.
 - Severity and category summaries.
 - Unicode findings.
@@ -113,6 +150,17 @@ The report contains:
 - Change records.
 - Confusable skeleton.
 - Explicit limitations.
+
+### Analyze files
+
+```js
+import { analyzeFile, analyzeFiles } from './src/files.js';
+
+const one = await analyzeFile('./notes.md');
+const many = await analyzeFiles(['./a.txt', './b.md']);
+```
+
+TXT, `.md`, and `.markdown` files are currently supported. The default per-file limit is 5 MiB.
 
 ## Cleaning policy
 
@@ -124,12 +172,6 @@ cleanText(text, {
   removeVariationSelectors: true
 });
 ```
-
-## Confusable coverage
-
-The current confusable detector covers a practical subset of common Greek and Cyrillic Latin-lookalike characters. It is deliberately labeled incomplete.
-
-A future v0.2 milestone will generate the full table from Unicode Consortium confusables data instead of maintaining a hand-written subset.
 
 ## Security and evidence limits
 
