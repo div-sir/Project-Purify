@@ -8,7 +8,7 @@ import {
   getScriptsMetadata,
   validateLanguageHint
 } from '../src/scripts.js';
-import { buildReport } from '../src/report.js';
+import { buildReport, REPORT_SCHEMA_VERSION } from '../src/report.js';
 
 test('classifies common scripts from pinned runtime metadata', () => {
   assert.equal(scriptOfCodePoint('A'.codePointAt(0)), 'Latin');
@@ -59,7 +59,8 @@ test('exposes script-data provenance in reports', () => {
   assert.ok(['fallback', 'full'].includes(metadata.completeness));
 
   const report = buildReport('pаypal');
-  assert.equal(report.schemaVersion, '1.2.0');
+  assert.equal(report.schemaVersion, REPORT_SCHEMA_VERSION);
+  assert.equal(report.schemaVersion, '1.4.0');
   assert.equal(report.summary.mixedScriptCount, 1);
   assert.equal(report.findings.mixedScripts.length, 1);
   assert.equal(report.dataProvenance.scripts.unicodeVersion, '17.0.0');
