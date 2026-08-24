@@ -2,11 +2,11 @@
 
 Project Purify is a local-first Unicode text-forensics toolkit. It detects invisible and format-control characters, Unicode confusables, and suspicious mixed-script tokens, explains the findings, and produces a controlled clean version when rewriting is safe.
 
-> Project Purify does **not** claim that Unicode artifacts prove AI authorship. Findings are text-level evidence only.
+> Project Purify does **not** claim that Unicode artifacts prove AI authorship. Findings are deterministic text-level evidence only.
 
 ## Current status
 
-`v0.7.0-dev` is under development in PR #1.
+`v0.8.0-dev` is under development in PR #1.
 
 Implemented:
 
@@ -17,11 +17,12 @@ Implemented:
 - Mixed-script token analysis with language-aware policy hints.
 - Identifier-focused source-code security profile.
 - Stable finding IDs, reasons, remediation guidance, and Unicode data provenance.
-- Versioned forensic JSON report schema (`1.2.0`).
+- Forensic report schema `1.3.0` with normalized options and SHA-256 evidence hashes.
+- Content-addressed, tamper-evident audit bundles and deterministic report comparison.
 - TXT/Markdown, JSON string-field, CSV field, and source-code analysis.
 - Recursive repository discovery with include/exclude globs.
 - Detect-only streaming for large plain-text/source files.
-- CLI JSON, JSONL, SARIF 2.1.0, severity exit policies, and dry-run mode.
+- CLI JSON, JSONL, SARIF 2.1.0, audit, comparison, severity policy, and dry-run modes.
 - Local Web Forensics Workbench with English, Traditional Chinese, and Japanese UI.
 - Chromium/Firefox-oriented browser extension implementation using the shared core.
 - Reusable GitHub Actions workflow, pre-commit guidance, and VS Code integration architecture.
@@ -34,11 +35,12 @@ See [ROADMAP.md](./ROADMAP.md) for the path to v1.0.
 
 Text copied from AI tools, websites, PDFs, editors, messaging apps, or source repositories can contain Unicode that is difficult to see but changes comparison, parsing, visual ordering, identifiers, filenames, or search results.
 
-Project Purify separates three questions:
+Project Purify separates four questions:
 
 1. What unusual Unicode is present?
 2. Is a visually deceptive or mixed-script token present?
 3. What can be safely removed or normalized without damaging legitimate text?
+4. Can the exact analysis be identified, verified, and reproduced later?
 
 It does not convert these signals into an unsupported AI-generation probability.
 
@@ -74,12 +76,6 @@ Supported analysis hints:
 auto, en, zh-Hant, zh, ja, ko, ar
 ```
 
-Analyze one file:
-
-```bash
-npm run scan -- --file ./sample.txt --json
-```
-
 Scan a repository recursively:
 
 ```bash
@@ -90,16 +86,28 @@ npm run scan -- --dir . \
   --fail-on-severity high
 ```
 
-Emit SARIF for code-scanning integrations:
+Emit SARIF:
 
 ```bash
 npm run scan -- --dir . --sarif > project-purify.sarif
 ```
 
-Analyze multiple explicit files:
+Create a tamper-evident audit bundle without embedding the original text:
 
 ```bash
-npm run scan -- --batch ./a.txt ./README.md ./data.json --jsonl
+npm run scan -- --text "pаypal" --language en --audit > audit.json
+```
+
+Create a self-contained reproducible bundle:
+
+```bash
+npm run scan -- --text "pаypal" --language en --audit --include-input > audit.json
+```
+
+Compare two report JSON files:
+
+```bash
+npm run scan -- --compare-reports before.json after.json
 ```
 
 Use detect-only streaming when a large plain/source file exceeds the normal in-memory limit:
@@ -119,8 +127,6 @@ Structured JSON/CSV files do not use large-file streaming because field boundari
 
 ## File safety policy
 
-Project Purify does not treat every file as rewritable.
-
 | Input | Policy |
 | --- | --- |
 | TXT / Markdown | `allowed` |
@@ -128,13 +134,11 @@ Project Purify does not treat every file as rewritable.
 | Source code | `detect-only` |
 | Large streamed text/source | `detect-only` |
 
-Source-code analysis never authorizes automatic rewriting. Review identifier and confusable findings before changing code.
+Source-code analysis never authorizes automatic rewriting. Review identifier/confusable findings before changing code.
 
 ## Mixed-script analysis
 
-Project Purify distinguishes ordinary multilingual writing from security-sensitive same-token script mixing.
-
-Examples that should normally remain unflagged under the matching language profile:
+Ordinary multilingual writing should remain usable under the matching language profile:
 
 ```text
 AI生成文字
@@ -149,24 +153,38 @@ pаypal
  ^ Cyrillic U+0430
 ```
 
-Mixed-script findings are still policy signals, not proof of malicious intent.
+Mixed-script findings are policy signals, not proof of malicious intent.
+
+## Reproducible evidence
+
+Report schema `1.3.0` records:
+
+- Project Purify version.
+- Normalized analysis options.
+- SHA-256 of input, cleaned output, and confusable skeleton.
+- Unicode data source/version/integrity metadata.
+- Machine-readable attribution limits.
+- Stable finding IDs and transformations.
+
+Audit bundles add a canonical bundle integrity hash and content address. A self-contained bundle can reproduce and compare tool version, options, Unicode provenance, hashes, and finding sets.
+
+See:
+
+- [Report schema](./docs/REPORT-SCHEMA.md)
+- [Offset semantics](./docs/OFFSETS.md)
+- [Audit bundles](./docs/AUDIT-BUNDLES.md)
+
+Hashes establish content identity, not authorship or authenticity. Audit bundle integrity is tamper evidence, not a digital signature.
 
 ## Unicode data
 
-The repository contains deterministic fallback data for offline use. Release/CI environments can regenerate full pinned Unicode 17.0.0 data:
+The repository contains deterministic fallback data for offline use. CI/release environments can regenerate full pinned Unicode 17.0.0 data:
 
 ```bash
 npm run update:unicode-data
 ```
 
-This runs:
-
-```bash
-npm run update:confusables
-npm run update:scripts
-```
-
-Generated metadata records the Unicode version, source URL, SHA-256, source date when available, entry/range count, generation time, and whether the dataset is `fallback` or `full`.
+Generated metadata records Unicode version, source URL, SHA-256, source date when available, entry/range count, generation time, and dataset completeness.
 
 ## Public ESM API
 
@@ -175,7 +193,10 @@ import {
   buildReport,
   analyzeFile,
   analyzeScripts,
-  analyzeIdentifierScripts,
+  createAuditBundle,
+  verifyAuditBundle,
+  reproduceAuditBundle,
+  compareReports,
   reportToSarif
 } from 'project-purify';
 
@@ -188,24 +209,11 @@ The package entry point is defined, but npm publication is intentionally blocked
 
 ## Web Workbench
 
-The browser Workbench provides:
-
-- Side-by-side original and clean text.
-- Inline forensic markers.
-- Severity/category filters.
-- Confusable skeleton preview.
-- Mixed-script findings.
-- English / Traditional Chinese / Japanese UI.
-- Independent analysis-language policy selector.
-- Drag-and-drop TXT/Markdown analysis.
-- JSON report download.
-- Local-only processing with no remote text API.
+The browser Workbench provides side-by-side text, inline markers, severity/category filters, confusable skeleton, mixed-script findings, English/Traditional Chinese/Japanese UI, an independent analysis-language selector, drag-and-drop TXT/Markdown input, report download, and local-only processing.
 
 ZWJ and variation selectors are preserved by default because they can be required for emoji or script shaping. ZWNJ can also be meaningful in some writing systems; review language context before removing it.
 
 ## Browser extension
-
-Build the shared-core extension package with:
 
 ```bash
 npm run build:extension
@@ -219,13 +227,13 @@ Chromium and Firefox runtime verification remain release gates.
 
 See `docs/DEVELOPER-INTEGRATIONS.md` for reusable GitHub Actions and pre-commit examples, and `docs/VSCODE-FEASIBILITY.md` for the editor-integration architecture.
 
-## Security and evidence limits
+## Evidence limits
 
 A suspicious character can come from AI tools, websites, copy/paste, typography systems, messaging applications, malicious text, or legitimate multilingual writing.
 
-UTS #39 skeleton mappings are comparison data, not automatic proof that a character is suspicious. Project Purify suppresses ASCII source mappings by default and applies language-aware mixed-script policies to reduce false positives.
+UTS #39 skeleton mappings are comparison data, not automatic proof that a character is suspicious. `high`, `medium`, and `low` are deterministic policy severities, not probabilities.
 
-Do not use a finding by itself to accuse a person or system of generating text with AI or acting maliciously.
+Project Purify does not support attribution confidence. Do not use a finding by itself to accuse a person or system of generating text with AI or acting maliciously.
 
 ## License
 
