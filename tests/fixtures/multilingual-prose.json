@@ -1,0 +1,12 @@
+[
+  { "languageHint": "zh-Hant", "text": "AI生成文字測試" },
+  { "languageHint": "zh-Hant", "text": "OpenAI模型支援繁體中文" },
+  { "languageHint": "zh-Hant", "text": "注音ㄅㄆㄇ與中文ABC" },
+  { "languageHint": "ja", "text": "AI生成テスト日本語" },
+  { "languageHint": "ja", "text": "OpenAIモデルを使う" },
+  { "languageHint": "ja", "text": "東京2026テスト" },
+  { "languageHint": "ko", "text": "AI모델테스트" },
+  { "languageHint": "ko", "text": "OpenAI한국어모델" },
+  { "languageHint": "ar", "text": "OpenAI نموذج عربي" },
+  { "languageHint": "en", "text": "Project Purify scans Unicode text." }
+]
