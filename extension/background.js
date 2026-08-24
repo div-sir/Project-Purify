@@ -1,5 +1,7 @@
 const ext = globalThis.browser ?? globalThis.chrome;
 const MENU_ID = 'project-purify-selection';
+const MAX_PENDING_TEXT = 1024 * 1024;
+const PENDING_KEYS = ['pendingText', 'pendingSource', 'pendingTruncated'];
 
 ext.runtime.onInstalled.addListener(async () => {
   await ext.contextMenus.removeAll();
@@ -13,14 +15,17 @@ ext.runtime.onInstalled.addListener(async () => {
 ext.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId !== MENU_ID || !info.selectionText) return;
 
+  const bounded = info.selectionText.slice(0, MAX_PENDING_TEXT);
   await ext.storage.session.set({
-    pendingText: info.selectionText,
-    pendingSource: 'context-menu'
+    pendingText: bounded,
+    pendingSource: 'context-menu',
+    pendingTruncated: info.selectionText.length > bounded.length
   });
 
   try {
     await ext.action.openPopup();
   } catch {
+    await ext.storage.session.remove(PENDING_KEYS);
     await ext.action.setBadgeText({ text: '!' });
     await ext.action.setBadgeBackgroundColor({ color: '#6b7280' });
   }
