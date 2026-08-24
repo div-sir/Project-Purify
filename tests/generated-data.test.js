@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { detectConfusables, getConfusablesMetadata } from '../src/confusables.js';
 import { getScriptsMetadata } from '../src/scripts.js';
-import { buildReport } from '../src/report.js';
+import { buildReport, REPORT_SCHEMA_VERSION } from '../src/report.js';
 
 test('exposes pinned confusables provenance', () => {
   const metadata = getConfusablesMetadata();
@@ -29,7 +29,8 @@ test('runtime detector uses generated data module', () => {
 
 test('report includes Unicode data provenance and hashes', () => {
   const report = buildReport('safe');
-  assert.equal(report.schemaVersion, '1.3.0');
+  assert.equal(report.schemaVersion, REPORT_SCHEMA_VERSION);
+  assert.equal(report.schemaVersion, '1.4.0');
   assert.equal(report.dataProvenance.confusables.unicodeVersion, '17.0.0');
   assert.equal(report.dataProvenance.scripts.unicodeVersion, '17.0.0');
   assert.match(report.evidenceHashes.input, /^[a-f0-9]{64}$/);
