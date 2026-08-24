@@ -25,6 +25,7 @@ function summarizeReports(reports) {
   return reports.reduce((summary, report) => {
     summary.invisibleOrControlCount += report.summary.invisibleOrControlCount;
     summary.confusableCount += report.summary.confusableCount;
+    summary.mixedScriptCount += report.summary.mixedScriptCount ?? 0;
     summary.highRiskCount += report.summary.highRiskCount;
     summary.changed ||= report.summary.changed;
     addCounts(summary.severityCounts, report.summary.severityCounts);
@@ -33,11 +34,24 @@ function summarizeReports(reports) {
   }, {
     invisibleOrControlCount: 0,
     confusableCount: 0,
+    mixedScriptCount: 0,
     highRiskCount: 0,
     changed: false,
     severityCounts: {},
     categoryCounts: {}
   });
+}
+
+function sourceReportOptions(options) {
+  const report = options.report ?? {};
+  return {
+    ...report,
+    scripts: {
+      ...(report.scripts ?? {}),
+      profile: 'identifier',
+      strictMixedScript: report.scripts?.strictMixedScript ?? true
+    }
+  };
 }
 
 function analyzeByExtension(filePath, text, options) {
@@ -61,13 +75,13 @@ function analyzeByExtension(filePath, text, options) {
   }
 
   if (SOURCE_EXTENSIONS.has(ext)) {
-    const report = buildReport(text, options.report ?? {});
+    const report = buildReport(text, sourceReportOptions(options));
     return {
       format: 'source',
       rewritePolicy: 'detect-only',
       report,
       summary: report.summary,
-      warning: 'Source-code safe mode does not authorize automatic rewriting. Review findings before changing code.'
+      warning: 'Source-code safe mode does not authorize automatic rewriting. Mixed-script analysis uses the identifier security profile. Review findings before changing code.'
     };
   }
 
@@ -85,7 +99,10 @@ async function analyzeLargeFile(filePath, stat, options) {
     path: filePath,
     bytes: stat.size,
     format: SOURCE_EXTENSIONS.has(ext) ? 'source' : 'text',
-    ...streamed
+    ...streamed,
+    warning: SOURCE_EXTENSIONS.has(ext)
+      ? 'Streaming source analysis is detect-only and does not run token-level mixed-script analysis across chunk boundaries.'
+      : streamed.warning
   };
 }
 
