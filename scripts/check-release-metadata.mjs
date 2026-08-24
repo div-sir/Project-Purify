@@ -26,8 +26,8 @@ requireCondition(readme.includes(`\`${PROJECT_PURIFY_VERSION}\``),
   `README.md does not mention current version ${PROJECT_PURIFY_VERSION}.`);
 requireCondition(readme.includes(`schema \`${REPORT_SCHEMA_VERSION}\``),
   `README.md does not mention report schema ${REPORT_SCHEMA_VERSION}.`);
-requireCondition(schemaDoc.includes(`Schema version: \`${REPORT_SCHEMA_VERSION}\``),
-  `docs/REPORT-SCHEMA.md does not declare schema ${REPORT_SCHEMA_VERSION}.`);
+requireCondition(schemaDoc.includes(`Current schema version: \`${REPORT_SCHEMA_VERSION}\``),
+  `docs/REPORT-SCHEMA.md does not declare current schema ${REPORT_SCHEMA_VERSION}.`);
 
 if (releaseMode) {
   requireCondition(pkg.private === false, 'Release mode requires package.json private=false.');
