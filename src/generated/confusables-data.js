@@ -6,11 +6,14 @@ export const CONFUSABLES_METADATA = Object.freeze({
   sourceUrl: 'https://www.unicode.org/Public/17.0.0/security/confusables.txt',
   sourceSha256: null,
   generatedAt: null,
-  entryCount: 49,
+  entryCount: 50,
   completeness: 'fallback'
 });
 
 export const GENERATED_CONFUSABLES = new Map([
+  // UTS #39 includes mappings for exemplar ASCII characters too. Keep one in the
+  // fallback so tests verify that skeleton mappings are not automatically findings.
+  [0x006D, 'rn'],
   [0x0410, 'A'], [0x0430, 'a'], [0x0412, 'B'], [0x0415, 'E'], [0x0435, 'e'],
   [0x041A, 'K'], [0x041C, 'M'], [0x041D, 'H'], [0x041E, 'O'], [0x043E, 'o'],
   [0x0420, 'P'], [0x0440, 'p'], [0x0421, 'C'], [0x0441, 'c'], [0x0422, 'T'],
