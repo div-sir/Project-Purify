@@ -45,14 +45,16 @@ export function diffText(original, cleaned) {
 export function buildReport(text, options = {}) {
   const scan = scanText(text);
   const cleanedText = cleanText(text, options.clean ?? {});
-  const confusables = detectConfusables(text);
+  const confusables = detectConfusables(text, options.confusables ?? {});
   const changes = diffText(text, cleanedText);
   const confusablesData = getConfusablesMetadata();
+  const allFindings = [...scan.findings, ...confusables];
 
-  const severityCounts = countBy([...scan.findings, ...confusables], 'severity');
-  const categoryCounts = countBy(scan.findings, 'category');
+  const severityCounts = countBy(allFindings, 'severity');
+  const categoryCounts = countBy(allFindings, 'category');
   const limitations = [
-    'Unicode findings are text-level evidence only and do not prove AI authorship.'
+    'Unicode findings are text-level evidence only and do not prove AI authorship.',
+    'UTS #39 skeleton mappings are broader than suspicious findings. ASCII source mappings are suppressed by default to reduce false positives.'
   ];
 
   if (confusablesData.completeness !== 'full') {
@@ -71,7 +73,7 @@ export function buildReport(text, options = {}) {
     summary: {
       invisibleOrControlCount: scan.count,
       confusableCount: confusables.length,
-      highRiskCount: scan.highRiskCount,
+      highRiskCount: allFindings.filter((finding) => finding.severity === 'high').length,
       changed: text !== cleanedText,
       severityCounts,
       categoryCounts
