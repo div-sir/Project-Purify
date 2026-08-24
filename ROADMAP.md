@@ -13,6 +13,7 @@ Project Purify MUST NOT claim that Unicode artifacts prove AI authorship. Findin
 5. Prefer auditable reports over opaque scores.
 6. Keep one shared detection core for CLI, web, extensions, and future editor integrations.
 7. Treat UTS #39 skeleton mappings as comparison data, not automatic proof that a character is suspicious.
+8. Treat mixed-script findings as policy signals and preserve legitimate multilingual writing through language-aware profiles.
 
 ## v0.1 — MVP foundation
 
@@ -112,39 +113,47 @@ Exit criteria: users can inspect selected or visible web text locally without op
 
 ## v0.6 — Developer Integrations
 
-Status: in progress in PR #1.
+Status: integration milestone implemented in PR #1. npm publication is intentionally deferred to the release phase.
 
-- [ ] Publish an npm package. Blocked until release verification and package-readiness review.
+- [ ] Publish an npm package. Deferred until release verification and package-readiness review.
 - [x] Define one public ESM entry point through package `exports`.
 - [x] Add Node `>=20` engine contract.
-- [x] Add GitHub Actions reusable workflow.
+- [x] Add GitHub Actions reusable workflow that works by checking out Project Purify directly.
+- [x] Add language-policy input to reusable CI.
 - [x] Add pre-commit integration guidance.
 - [x] Add CI exit codes based on severity policy.
 - [x] Add SARIF 2.1.0 output for code-scanning interfaces.
+- [x] Use UTF-16 positions for SARIF/editor-facing offsets.
 - [x] Keep JSON/CSV field-local positions from being misreported as whole-file SARIF regions.
 - [x] Add developer integration documentation.
 - [x] Complete VS Code extension feasibility architecture.
 - [x] Add public API, workflow, SARIF, and CLI integration tests.
 
-Exit criteria: repositories can use Project Purify as a deterministic Unicode policy check. npm publication remains a release action, not a prerequisite for validating the integration design.
+Exit criteria: repositories can use Project Purify as a deterministic Unicode policy check without requiring an npm release.
 
 ## v0.7 — Unicode Coverage and Internationalization
 
-Status: next after v0.6 validation.
+Status: implemented in PR #1; full generated-data CI and browser runtime verification remain release gates.
 
-- [ ] Generate broader character metadata from version-pinned Unicode data files.
-- [ ] Add stronger mixed-script analysis.
-- [ ] Add language/script-aware false-positive reduction.
-- [ ] Add identifier-focused security profile for source code.
-- [ ] Add English UI.
-- [ ] Add Traditional Chinese UI.
-- [ ] Add Japanese UI.
-- [ ] Explain legitimate ZWJ/ZWNJ and shaping use cases in context.
-- [ ] Add full-data false-positive corpus for ordinary multilingual prose.
+- [x] Add version-pinned Unicode 17.0.0 `Scripts.txt` generator and fallback runtime metadata.
+- [x] Add stronger same-token mixed-script analysis.
+- [x] Add language/script-aware false-positive reduction.
+- [x] Add analysis hints for `auto`, English, Traditional Chinese, Japanese, Korean, and Arabic workflows.
+- [x] Add identifier-focused security profile for source code.
+- [x] Add English Workbench UI.
+- [x] Add Traditional Chinese Workbench UI.
+- [x] Add Japanese Workbench UI.
+- [x] Keep UI language independent from analysis-language policy.
+- [x] Explain legitimate ZWJ/ZWNJ and shaping use cases in context.
+- [x] Add ordinary multilingual false-positive corpus.
+- [x] Run the corpus under fallback data and the full-data CI job.
+- [x] Include mixed-script findings in SARIF, Workbench, CLI, and shared Extension core.
 
-Exit criteria: broader Unicode coverage does not sacrifice legitimate multilingual text.
+Exit criteria: broader Unicode coverage does not sacrifice ordinary multilingual text, while security-sensitive Latin/Greek/Cyrillic-style mixing remains reportable.
 
 ## v0.8 — Forensic Evidence and Reproducibility
+
+Status: next.
 
 - [ ] Add reproducible tool/build metadata to reports.
 - [ ] Add SHA-256 input/output hashes.
