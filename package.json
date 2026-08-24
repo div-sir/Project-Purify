@@ -1,0 +1,12 @@
+{
+  "name": "project-purify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "python3 -m http.server 4173"
+  },
+  "description": "Detect invisible and format-control Unicode characters and produce a clean text version.",
+  "license": "MIT"
+}
