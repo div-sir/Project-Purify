@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { isSupportedTextPath } from './files.js';
 
-const DEFAULT_EXCLUDES = ['**/.git/**', '**/node_modules/**'];
+const DEFAULT_EXCLUDES = ['**/.git', '**/.git/**', '**/node_modules', '**/node_modules/**'];
 
 function escapeRegex(text) {
   return text.replace(/[.+^${}()|[\]\\]/g, '\\$&');
