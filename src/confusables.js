@@ -38,6 +38,7 @@ export function detectConfusables(text, options = {}) {
       findings.push({
         id: stableId(label, charIndex),
         type: 'confusable',
+        category: 'confusable',
         char: ch,
         codePoint: cp,
         label,
