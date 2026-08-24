@@ -114,7 +114,13 @@ async function scanPage() {
 }
 
 async function copyClean() {
-  await navigator.clipboard.writeText(clean.value);
+  try {
+    await navigator.clipboard.writeText(clean.value);
+  } catch {
+    clean.focus();
+    clean.select();
+    document.execCommand('copy');
+  }
   status.textContent = 'Clean text copied.';
 }
 
