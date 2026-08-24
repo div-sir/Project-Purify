@@ -46,11 +46,24 @@ jobs:
         with:
           node-version: 22
 
-      - name: Generate pinned Unicode confusables data
-        run: npm run update:confusables
+      - name: Generate pinned Unicode data
+        run: npm run update:unicode-data
 
-      - name: Verify full generated dataset
-        run: node --input-type=module -e "import('./src/generated/confusables-data.js').then(({CONFUSABLES_METADATA}) => { if (CONFUSABLES_METADATA.completeness !== 'full' || !CONFUSABLES_METADATA.sourceSha256) process.exit(1); console.log(CONFUSABLES_METADATA); })"
+      - name: Verify full generated datasets
+        run: >-
+          node --input-type=module -e "
+          const [{CONFUSABLES_METADATA}, {SCRIPTS_METADATA}] = await Promise.all([
+            import('./src/generated/confusables-data.js'),
+            import('./src/generated/scripts-data.js')
+          ]);
+          const valid =
+            CONFUSABLES_METADATA.completeness === 'full' &&
+            Boolean(CONFUSABLES_METADATA.sourceSha256) &&
+            SCRIPTS_METADATA.completeness === 'full' &&
+            Boolean(SCRIPTS_METADATA.sourceSha256);
+          console.log({CONFUSABLES_METADATA, SCRIPTS_METADATA});
+          if (!valid) process.exit(1);
+          "
 
       - name: Run tests with generated Unicode data
         run: npm test
