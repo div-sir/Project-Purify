@@ -23,9 +23,9 @@ test('ASCII skeleton mappings are not suspicious findings by default', () => {
 test('builds a versioned forensic report with evidence hashes', () => {
   const report = buildReport('A\u200Bpаypal');
   assert.equal(report.schemaVersion, REPORT_SCHEMA_VERSION);
-  assert.equal(report.schemaVersion, '1.3.0');
+  assert.equal(report.schemaVersion, '1.4.0');
   assert.equal(report.tool.name, 'Project Purify');
-  assert.match(report.tool.version, /^0\.8\.0-dev$/);
+  assert.match(report.tool.version, /^0\.9\.0-dev$/);
   assert.equal(report.evidenceHashes.algorithm, 'SHA-256');
   assert.match(report.evidenceHashes.input, /^[a-f0-9]{64}$/);
   assert.match(report.evidenceHashes.cleaned, /^[a-f0-9]{64}$/);
@@ -37,10 +37,13 @@ test('builds a versioned forensic report with evidence hashes', () => {
   assert.equal(report.transformations.confusableSkeleton, 'A\u200Bpaypal');
 });
 
-test('report records normalized analysis options', () => {
+test('report records normalized conservative cleaning options', () => {
   const report = buildReport('safe', { scripts: { languageHint: 'ja' }, clean: { removeZeroWidthJoiner: true } });
   assert.equal(report.analysisOptions.scripts.languageHint, 'ja');
   assert.equal(report.analysisOptions.clean.removeZeroWidthJoiner, true);
+  assert.equal(report.analysisOptions.clean.removeZeroWidthNonJoiner, false);
+  assert.equal(report.analysisOptions.clean.removeDirectionalControls, false);
+  assert.equal(report.analysisOptions.clean.removeTagCharacters, false);
   assert.equal(report.analysisOptions.clean.normalize, 'NFC');
 });
 
