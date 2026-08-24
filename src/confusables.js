@@ -15,11 +15,16 @@ function stableId(label, charIndex) {
   return `confusable:${label}:${charIndex}`;
 }
 
+function shouldReportMapping(cp, options) {
+  if (options.includeAscii === true) return true;
+  return cp > 0x7F;
+}
+
 export function getConfusablesMetadata() {
   return { ...CONFUSABLES_METADATA };
 }
 
-export function detectConfusables(text) {
+export function detectConfusables(text, options = {}) {
   const findings = [];
   let utf16Index = 0;
   let charIndex = 0;
@@ -27,7 +32,7 @@ export function detectConfusables(text) {
   for (const ch of text) {
     const cp = ch.codePointAt(0);
     const replacement = GENERATED_CONFUSABLES.get(cp);
-    if (replacement) {
+    if (replacement && shouldReportMapping(cp, options)) {
       const label = codeLabel(cp);
       const script = scriptOf(cp);
       findings.push({
@@ -58,9 +63,9 @@ export function detectConfusables(text) {
 
 export function confusableSkeleton(text) {
   let out = '';
-  for (const ch of text) {
+  for (const ch of text.normalize('NFD')) {
     const cp = ch.codePointAt(0);
     out += GENERATED_CONFUSABLES.get(cp) ?? ch;
   }
-  return out;
+  return out.normalize('NFD');
 }
