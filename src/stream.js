@@ -77,9 +77,15 @@ export async function analyzeTextFileStream(filePath, options = {}) {
     path: filePath,
     bytes: stat.size,
     rewritePolicy: 'detect-only',
+    analysisCoverage: {
+      unicodeControls: 'full',
+      confusables: 'full',
+      mixedScriptTokens: 'not-evaluated'
+    },
     summary: {
       invisibleOrControlCount: totalUnicode,
       confusableCount: totalConfusables,
+      mixedScriptCount: null,
       highRiskCount,
       changed: false,
       severityCounts,
@@ -90,6 +96,7 @@ export async function analyzeTextFileStream(filePath, options = {}) {
     limitations: [
       'Streaming mode is detect-only and does not produce cleaned output.',
       'Finding context is limited to the stream chunk that contained the character.',
+      'Mixed-script token analysis is not evaluated in streaming mode because token boundaries can span chunks.',
       'Structured JSON and CSV files are not streamed because field boundaries can span chunks.'
     ]
   };
