@@ -50,6 +50,16 @@ async function activeTabId() {
   return tab?.id ?? null;
 }
 
+async function ensurePageMonitor() {
+  const tabId = await activeTabId();
+  if (!tabId) return false;
+  await ext.scripting.executeScript({
+    target: { tabId },
+    files: ['content.js']
+  });
+  return true;
+}
+
 async function readPageSelection() {
   const tabId = await activeTabId();
   if (!tabId) return '';
@@ -145,6 +155,12 @@ document.querySelector('#clear').addEventListener('click', () => {
   render();
 });
 input.addEventListener('input', render);
+
+try {
+  await ensurePageMonitor();
+} catch {
+  // Restricted browser pages can reject injection. Explicit selection/page actions handle this gracefully.
+}
 
 if (!(await loadPendingContextSelection())) {
   await useSelection();
