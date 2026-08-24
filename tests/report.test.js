@@ -14,6 +14,12 @@ test('builds a Latin-lookalike skeleton', () => {
   assert.equal(confusableSkeleton('pаypal'), 'paypal');
 });
 
+test('ASCII skeleton mappings are not suspicious findings by default', () => {
+  assert.equal(confusableSkeleton('m'), 'rn');
+  assert.equal(detectConfusables('normal message').some((finding) => finding.label === 'U+006D'), false);
+  assert.equal(detectConfusables('m', { includeAscii: true })[0].label, 'U+006D');
+});
+
 test('builds a versioned forensic report', () => {
   const report = buildReport('A\u200Bpаypal');
   assert.equal(report.schemaVersion, REPORT_SCHEMA_VERSION);
