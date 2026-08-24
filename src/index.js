@@ -1,5 +1,14 @@
 export { scanText, cleanText, visualizeText, classifyCodePoint } from './scanner.js';
 export { detectConfusables, confusableSkeleton, getConfusablesMetadata } from './confusables.js';
+export {
+  analyzeScripts,
+  analyzeIdentifierScripts,
+  scriptsInText,
+  scriptOfCodePoint,
+  getScriptsMetadata,
+  validateLanguageHint,
+  VALID_LANGUAGE_HINTS
+} from './scripts.js';
 export { buildReport, diffText, REPORT_SCHEMA_VERSION } from './report.js';
 export { analyzeFile, analyzeFiles, isSupportedTextPath, DEFAULT_MAX_FILE_BYTES } from './files.js';
 export { analyzeTextFileStream, DEFAULT_STREAM_MAX_BYTES, DEFAULT_STREAM_MAX_FINDINGS } from './stream.js';
