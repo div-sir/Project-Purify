@@ -47,6 +47,16 @@ test('mixed-script spoof can trigger severity policy', () => {
   assert.match(result.stdout, /Mixed-script findings: 1/);
 });
 
+test('aggressive CLI cleaning removes tag characters explicitly', () => {
+  const tagged = `A\u{E0067}B`;
+  const conservative = run(['--text', tagged, '--clean']);
+  const aggressive = run(['--text', tagged, '--clean', '--aggressive']);
+  assert.equal(conservative.status, 0, conservative.stderr);
+  assert.equal(conservative.stdout, tagged);
+  assert.equal(aggressive.status, 0, aggressive.stderr);
+  assert.equal(aggressive.stdout, 'AB');
+});
+
 test('audit output can be self-contained and integrity protected', () => {
   const result = run(['--text', 'A\u200BB', '--audit', '--include-input']);
   assert.equal(result.status, 0, result.stderr);
@@ -99,6 +109,16 @@ test('directory mode discovers nested supported files', async () => {
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.length, 2);
   assert.equal(parsed.every((item) => item.ok), true);
+});
+
+test('streaming human output marks mixed-script analysis as not evaluated', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'purify-cli-'));
+  const file = path.join(dir, 'large.txt');
+  await fs.writeFile(file, 'pаypal', 'utf8');
+  const result = run(['--file', file, '--max-bytes', '2', '--stream']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Mixed-script findings: not-evaluated/);
+  assert.match(result.stdout, /mixed-script token analysis is not evaluated/i);
 });
 
 test('clean output is refused for detect-only source files', async () => {
