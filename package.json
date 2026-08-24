@@ -1,6 +1,6 @@
 {
   "name": "project-purify",
-  "version": "0.2.0-dev",
+  "version": "0.5.0-dev",
   "private": true,
   "type": "module",
   "bin": {
