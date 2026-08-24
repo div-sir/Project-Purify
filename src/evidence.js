@@ -8,6 +8,14 @@ function bundlePayload(bundle) {
   return payload;
 }
 
+function findingIds(report) {
+  return [
+    ...(report?.findings?.unicode ?? []),
+    ...(report?.findings?.confusables ?? []),
+    ...(report?.findings?.mixedScripts ?? [])
+  ].map((finding) => finding.id).sort();
+}
+
 export function createAuditBundle(text, options = {}, bundleOptions = {}) {
   const report = buildReport(text, options);
   const includeInput = bundleOptions.includeInput === true;
@@ -24,12 +32,14 @@ export function createAuditBundle(text, options = {}, bundleOptions = {}) {
     },
     report
   };
+  const bundleSha256 = sha256Text(stableStringify(payload));
 
   return {
     ...payload,
     integrity: {
       algorithm: 'SHA-256',
-      bundleSha256: sha256Text(stableStringify(payload))
+      bundleSha256,
+      contentAddress: `sha256:${bundleSha256}`
     }
   };
 }
@@ -53,7 +63,8 @@ export function verifyAuditBundle(bundle) {
     integrityValid,
     inputHashValid,
     expectedBundleSha256: expected ?? null,
-    actualBundleSha256: actual
+    actualBundleSha256: actual,
+    contentAddress: `sha256:${actual}`
   };
 }
 
@@ -61,11 +72,27 @@ export function reproduceAuditBundle(bundle) {
   if (typeof bundle?.evidence?.inputText !== 'string') {
     throw new Error('Audit bundle does not include input text. Reproduction requires a self-contained bundle.');
   }
+
   const report = buildReport(bundle.evidence.inputText, bundle.analysisOptions ?? {});
+  const inputHashMatches = report.evidenceHashes.input === bundle.report?.evidenceHashes?.input;
+  const cleanedHashMatches = report.evidenceHashes.cleaned === bundle.report?.evidenceHashes?.cleaned;
+  const skeletonHashMatches = report.evidenceHashes.confusableSkeleton === bundle.report?.evidenceHashes?.confusableSkeleton;
+  const toolVersionMatches = report.tool?.version === bundle.report?.tool?.version;
+  const analysisOptionsMatch = stableStringify(report.analysisOptions) === stableStringify(bundle.report?.analysisOptions ?? {});
+  const confusablesProvenanceMatches = stableStringify(report.dataProvenance?.confusables ?? {}) === stableStringify(bundle.report?.dataProvenance?.confusables ?? {});
+  const scriptsProvenanceMatches = stableStringify(report.dataProvenance?.scripts ?? {}) === stableStringify(bundle.report?.dataProvenance?.scripts ?? {});
+  const findingSetMatches = stableStringify(findingIds(report)) === stableStringify(findingIds(bundle.report));
+
   return {
     report,
-    inputHashMatches: report.evidenceHashes.input === bundle.report?.evidenceHashes?.input,
-    cleanedHashMatches: report.evidenceHashes.cleaned === bundle.report?.evidenceHashes?.cleaned,
-    skeletonHashMatches: report.evidenceHashes.confusableSkeleton === bundle.report?.evidenceHashes?.confusableSkeleton
+    inputHashMatches,
+    cleanedHashMatches,
+    skeletonHashMatches,
+    toolVersionMatches,
+    analysisOptionsMatch,
+    confusablesProvenanceMatches,
+    scriptsProvenanceMatches,
+    findingSetMatches,
+    reproductionValid: inputHashMatches && cleanedHashMatches && skeletonHashMatches && toolVersionMatches && analysisOptionsMatch && confusablesProvenanceMatches && scriptsProvenanceMatches && findingSetMatches
   };
 }
