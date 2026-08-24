@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Project Purify",
+  "version": "0.9.0",
+  "description": "Inspect selected text for invisible, format-control, confusable, and mixed-script Unicode without uploading it.",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "scripting",
+    "storage"
+  ],
+  "action": {
+    "default_title": "Project Purify",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "scripts": ["background.js"],
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "core/*.js",
+        "core/generated/*.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

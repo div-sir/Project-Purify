@@ -1,0 +1,75 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+      - 'agent/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Check release metadata consistency
+        run: npm run check:release-metadata
+
+      - name: Run tests
+        run: npm test
+
+  unicode-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Check release metadata consistency
+        run: npm run check:release-metadata
+
+      - name: Generate pinned Unicode data
+        run: npm run update:unicode-data
+
+      - name: Verify full generated datasets
+        run: >-
+          node --input-type=module -e "
+          const [{CONFUSABLES_METADATA}, {SCRIPTS_METADATA}] = await Promise.all([
+            import('./src/generated/confusables-data.js'),
+            import('./src/generated/scripts-data.js')
+          ]);
+          const valid =
+            CONFUSABLES_METADATA.completeness === 'full' &&
+            Boolean(CONFUSABLES_METADATA.sourceSha256) &&
+            SCRIPTS_METADATA.completeness === 'full' &&
+            Boolean(SCRIPTS_METADATA.sourceSha256);
+          console.log({CONFUSABLES_METADATA, SCRIPTS_METADATA});
+          if (!valid) process.exit(1);
+          "
+
+      - name: Run tests with generated Unicode data
+        run: npm test
