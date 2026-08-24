@@ -1,10 +1,21 @@
 {
   "name": "project-purify",
-  "version": "0.5.0-dev",
+  "version": "0.6.0-dev",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
   "bin": {
     "project-purify": "./src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
     "test": "node --test",
@@ -14,5 +25,12 @@
     "build:extension": "node ./scripts/build-extension.mjs"
   },
   "description": "Detect suspicious Unicode text artifacts, explain them, and produce a controlled clean version.",
+  "keywords": [
+    "unicode",
+    "security",
+    "confusables",
+    "zero-width",
+    "text-forensics"
+  ],
   "license": "MIT"
 }
