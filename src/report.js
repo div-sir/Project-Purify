@@ -1,7 +1,8 @@
 import { scanText, cleanText } from './scanner.js';
 import { detectConfusables, confusableSkeleton, getConfusablesMetadata } from './confusables.js';
+import { analyzeScripts, getScriptsMetadata } from './scripts.js';
 
-export const REPORT_SCHEMA_VERSION = '1.1.0';
+export const REPORT_SCHEMA_VERSION = '1.2.0';
 
 function countBy(items, key) {
   return items.reduce((acc, item) => {
@@ -46,33 +47,48 @@ export function buildReport(text, options = {}) {
   const scan = scanText(text);
   const cleanedText = cleanText(text, options.clean ?? {});
   const confusables = detectConfusables(text, options.confusables ?? {});
+  const scriptAnalysis = analyzeScripts(text, options.scripts ?? {});
+  const mixedScripts = scriptAnalysis.findings;
   const changes = diffText(text, cleanedText);
   const confusablesData = getConfusablesMetadata();
-  const allFindings = [...scan.findings, ...confusables];
+  const scriptsData = getScriptsMetadata();
+  const allFindings = [...scan.findings, ...confusables, ...mixedScripts];
 
   const severityCounts = countBy(allFindings, 'severity');
   const categoryCounts = countBy(allFindings, 'category');
   const limitations = [
     'Unicode findings are text-level evidence only and do not prove AI authorship.',
-    'UTS #39 skeleton mappings are broader than suspicious findings. ASCII source mappings are suppressed by default to reduce false positives.'
+    'UTS #39 skeleton mappings are broader than suspicious findings. ASCII source mappings are suppressed by default to reduce false positives.',
+    'Mixed-script findings are policy signals, not proof of deception. Legitimate multilingual text can mix scripts intentionally.'
   ];
 
   if (confusablesData.completeness !== 'full') {
     limitations.push('This build uses the offline fallback confusables dataset. Run the pinned Unicode data generator for complete UTS #39 coverage.');
   }
+  if (scriptsData.completeness !== 'full') {
+    limitations.push('This build uses fallback script-range metadata. Run the pinned Unicode script-data generator for complete script coverage.');
+  }
 
   return {
     schemaVersion: REPORT_SCHEMA_VERSION,
     dataProvenance: {
-      confusables: confusablesData
+      confusables: confusablesData,
+      scripts: scriptsData
     },
     input: {
       utf16Length: text.length,
       codePointLength: [...text].length
     },
+    scriptAnalysis: {
+      profile: scriptAnalysis.profile,
+      languageHint: scriptAnalysis.languageHint,
+      tokensAnalyzed: scriptAnalysis.tokensAnalyzed,
+      scriptsUsed: scriptAnalysis.scriptsUsed
+    },
     summary: {
       invisibleOrControlCount: scan.count,
       confusableCount: confusables.length,
+      mixedScriptCount: mixedScripts.length,
       highRiskCount: allFindings.filter((finding) => finding.severity === 'high').length,
       changed: text !== cleanedText,
       severityCounts,
@@ -80,7 +96,8 @@ export function buildReport(text, options = {}) {
     },
     findings: {
       unicode: scan.findings,
-      confusables
+      confusables,
+      mixedScripts
     },
     transformations: {
       cleanedText,
