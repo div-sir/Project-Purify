@@ -5,7 +5,7 @@ import { sha256Text } from './hash.js';
 import { normalizeReportOptions } from './options.js';
 import { PROJECT_PURIFY_NAME, PROJECT_PURIFY_VERSION } from './version.js';
 
-export const REPORT_SCHEMA_VERSION = '1.3.0';
+export const REPORT_SCHEMA_VERSION = '1.4.0';
 
 function countBy(items, key) {
   return items.reduce((acc, item) => {
@@ -64,7 +64,8 @@ export function buildReport(text, options = {}) {
   const limitations = [
     'Unicode findings are text-level evidence only and do not prove AI authorship.',
     'UTS #39 skeleton mappings are broader than suspicious findings. ASCII source mappings are suppressed by default to reduce false positives.',
-    'Mixed-script findings are policy signals, not proof of deception. Legitimate multilingual text can mix scripts intentionally.'
+    'Mixed-script findings are policy signals, not proof of deception. Legitimate multilingual text can mix scripts intentionally.',
+    'Conservative cleaning preserves shaping-, direction-, presentation-, and tag-sensitive controls by default. Aggressive removal requires explicit opt-in.'
   ];
 
   if (confusablesData.completeness !== 'full') {
