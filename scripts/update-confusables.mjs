@@ -1,4 +1,6 @@
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const UNICODE_VERSION = process.env.UNICODE_VERSION ?? '17.0.0';
 const SOURCE = `https://www.unicode.org/Public/${UNICODE_VERSION}/security/confusables.txt`;
@@ -35,5 +37,6 @@ const lines = [
   ''
 ];
 
+await mkdir(dirname(fileURLToPath(OUTPUT)), { recursive: true });
 await writeFile(OUTPUT, lines.join('\n'), 'utf8');
 console.log(`Wrote ${entries.length} mappings to ${OUTPUT.pathname}`);
