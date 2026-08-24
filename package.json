@@ -1,12 +1,16 @@
 {
   "name": "project-purify",
-  "version": "0.1.0",
+  "version": "0.2.0-dev",
   "private": true,
   "type": "module",
+  "bin": {
+    "project-purify": "./src/cli.js"
+  },
   "scripts": {
     "test": "node --test",
-    "serve": "python3 -m http.server 4173"
+    "serve": "python3 -m http.server 4173",
+    "scan": "node ./src/cli.js"
   },
-  "description": "Detect invisible and format-control Unicode characters and produce a clean text version.",
+  "description": "Detect suspicious Unicode text artifacts, explain them, and produce a controlled clean version.",
   "license": "MIT"
 }
