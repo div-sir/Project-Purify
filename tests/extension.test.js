@@ -25,6 +25,22 @@ test('extension source has no remote text transport API', async () => {
   assert.match(source, /globalThis\.browser \?\? globalThis\.chrome/);
 });
 
+test('extension bounds page and pending selection text and clears pending storage', async () => {
+  const background = await fs.readFile(path.join(ROOT, 'extension', 'background.js'), 'utf8');
+  const popup = await fs.readFile(path.join(ROOT, 'extension', 'popup.js'), 'utf8');
+  assert.match(background, /MAX_PENDING_TEXT\s*=\s*1024 \* 1024/);
+  assert.match(background, /pendingTruncated/);
+  assert.match(background, /storage\.session\.remove\(PENDING_KEYS\)/);
+  assert.match(popup, /MAX_PAGE_TEXT\s*=\s*1024 \* 1024/);
+  assert.match(popup, /storage\.session\.remove\(PENDING_KEYS\)/);
+});
+
+test('content inspection allowlist excludes password inputs', async () => {
+  const source = await fs.readFile(path.join(ROOT, 'extension', 'content.js'), 'utf8');
+  assert.match(source, /\^\(text\|search\|url\|email\|tel\)\$/i);
+  assert.doesNotMatch(source, /type\s*===?\s*['"]password['"]/i);
+});
+
 test('popup exposes selection and visible-page scans', async () => {
   const html = await fs.readFile(path.join(ROOT, 'extension', 'popup.html'), 'utf8');
   assert.match(html, /id="selection"/);
