@@ -7,12 +7,13 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-test('extension uses Manifest V3 with minimal local-analysis permissions', async () => {
+test('extension uses Manifest V3 with activeTab-only page access', async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(ROOT, 'extension', 'manifest.json'), 'utf8'));
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.permissions.includes('activeTab'), true);
   assert.equal(manifest.permissions.includes('scripting'), true);
   assert.equal('host_permissions' in manifest, false);
+  assert.equal('content_scripts' in manifest, false);
   assert.equal(manifest.background.service_worker, 'background.js');
   assert.deepEqual(manifest.background.scripts, ['background.js']);
 });
@@ -33,6 +34,13 @@ test('extension bounds page and pending selection text and clears pending storag
   assert.match(background, /storage\.session\.remove\(PENDING_KEYS\)/);
   assert.match(popup, /MAX_PAGE_TEXT\s*=\s*1024 \* 1024/);
   assert.match(popup, /storage\.session\.remove\(PENDING_KEYS\)/);
+});
+
+test('page monitor is injected on demand and is idempotent', async () => {
+  const popup = await fs.readFile(path.join(ROOT, 'extension', 'popup.js'), 'utf8');
+  const content = await fs.readFile(path.join(ROOT, 'extension', 'content.js'), 'utf8');
+  assert.match(popup, /files:\s*\['content\.js'\]/);
+  assert.match(content, /__PROJECT_PURIFY_MONITOR_ACTIVE__/);
 });
 
 test('content inspection allowlist excludes password inputs', async () => {
