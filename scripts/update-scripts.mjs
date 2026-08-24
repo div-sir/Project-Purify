@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fetchUnicodeText } from './fetch-unicode.mjs';
 
 const UNICODE_VERSION = process.env.UNICODE_VERSION ?? '17.0.0';
 const SOURCE = `https://www.unicode.org/Public/${UNICODE_VERSION}/ucd/Scripts.txt`;
@@ -9,12 +10,15 @@ const OUTPUT = new URL('../src/generated/scripts-data.js', import.meta.url);
 
 function parseRange(field) {
   const [startHex, endHex = startHex] = field.trim().split('..');
-  return [Number.parseInt(startHex, 16), Number.parseInt(endHex, 16)];
+  const start = Number.parseInt(startHex, 16);
+  const end = Number.parseInt(endHex, 16);
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end > 0x10FFFF || start > end) {
+    throw new Error(`Invalid Unicode script range: ${field}`);
+  }
+  return [start, end];
 }
 
-const response = await fetch(SOURCE);
-if (!response.ok) throw new Error(`Failed to fetch ${SOURCE}: ${response.status}`);
-const text = await response.text();
+const text = await fetchUnicodeText(SOURCE);
 const sourceSha256 = createHash('sha256').update(text, 'utf8').digest('hex');
 const ranges = [];
 
@@ -59,3 +63,4 @@ const lines = [
 await mkdir(dirname(fileURLToPath(OUTPUT)), { recursive: true });
 await writeFile(OUTPUT, lines.join('\n'), 'utf8');
 console.log(`Wrote ${merged.length} script ranges to ${OUTPUT.pathname}`);
+console.log(`Source SHA-256: ${sourceSha256}`);
