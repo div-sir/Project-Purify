@@ -30,7 +30,7 @@ Exit criteria: deterministic scan and clean APIs with safe defaults.
 
 ## v0.2 — Text Forensics Core
 
-Status: in progress.
+Status: implemented in PR #1.
 
 - [x] Define versioned JSON report schema.
 - [x] Add original-versus-cleaned change list.
@@ -42,20 +42,24 @@ Status: in progress.
 - [x] Add snapshot fixtures for multilingual text.
 - [x] Add deterministic fuzz/property tests for scanner invariants.
 - [x] Add a version-pinned Unicode Consortium confusables data generator.
-- [ ] Integrate the generated full Unicode 17.0.0 confusables mapping into the runtime detector.
-- [ ] Add generated-data provenance and integrity metadata.
+- [x] Integrate generated Unicode 17.0.0 confusables data into the runtime detector.
+- [x] Add generated-data provenance and SHA-256 integrity metadata.
+- [x] Verify full generated data in CI while retaining an offline fallback dataset.
 
-Exit criteria: the same input produces a stable, explainable report from library and CLI.
+Exit criteria: the same build and input produce a stable, explainable report from library and CLI, with its Unicode data source recorded in the report.
 
 ## v0.3 — File and Batch Analysis
 
-- [ ] TXT and Markdown file analysis.
+Status: in progress.
+
+- [x] TXT and Markdown file analysis.
 - [ ] JSON and CSV text-field analysis without damaging syntax.
 - [ ] Source-code safe mode.
 - [ ] Directory recursion with include/exclude globs.
-- [ ] Batch JSON/JSONL reports.
+- [x] Batch JSON/JSONL reports.
 - [ ] Dry-run and fail-on-severity CLI options.
-- [ ] Size limits and streaming for large files.
+- [x] File size limits.
+- [ ] Streaming for large files.
 
 Exit criteria: Project Purify can scan repositories and document collections safely.
 
