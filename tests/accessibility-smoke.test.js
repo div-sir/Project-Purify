@@ -11,7 +11,7 @@ test('Workbench keeps keyboard and live-region accessibility hooks', () => {
   assert.match(workbench, /id="dropZone"[^>]+tabindex="0"[^>]+role="button"/);
   assert.match(workbench, /dropZone\.addEventListener\('keydown'/);
   assert.match(workbench, /aria-live="polite"/);
-  assert.match(workbench, /<th>/);
+  assert.match(workbench, /<th\b/i);
   assert.match(workbench, /<button\b/);
   assert.match(workbench, /<select\b/);
 });
