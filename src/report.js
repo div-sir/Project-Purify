@@ -1,8 +1,11 @@
 import { scanText, cleanText } from './scanner.js';
 import { detectConfusables, confusableSkeleton, getConfusablesMetadata } from './confusables.js';
 import { analyzeScripts, getScriptsMetadata } from './scripts.js';
+import { sha256Text } from './hash.js';
+import { normalizeReportOptions } from './options.js';
+import { PROJECT_PURIFY_NAME, PROJECT_PURIFY_VERSION } from './version.js';
 
-export const REPORT_SCHEMA_VERSION = '1.2.0';
+export const REPORT_SCHEMA_VERSION = '1.3.0';
 
 function countBy(items, key) {
   return items.reduce((acc, item) => {
@@ -44,12 +47,14 @@ export function diffText(original, cleaned) {
 }
 
 export function buildReport(text, options = {}) {
+  const analysisOptions = normalizeReportOptions(options);
   const scan = scanText(text);
-  const cleanedText = cleanText(text, options.clean ?? {});
-  const confusables = detectConfusables(text, options.confusables ?? {});
-  const scriptAnalysis = analyzeScripts(text, options.scripts ?? {});
+  const cleanedText = cleanText(text, analysisOptions.clean);
+  const confusables = detectConfusables(text, analysisOptions.confusables);
+  const scriptAnalysis = analyzeScripts(text, analysisOptions.scripts);
   const mixedScripts = scriptAnalysis.findings;
   const changes = diffText(text, cleanedText);
+  const skeleton = confusableSkeleton(text);
   const confusablesData = getConfusablesMetadata();
   const scriptsData = getScriptsMetadata();
   const allFindings = [...scan.findings, ...confusables, ...mixedScripts];
@@ -71,6 +76,17 @@ export function buildReport(text, options = {}) {
 
   return {
     schemaVersion: REPORT_SCHEMA_VERSION,
+    tool: {
+      name: PROJECT_PURIFY_NAME,
+      version: PROJECT_PURIFY_VERSION
+    },
+    analysisOptions,
+    evidenceHashes: {
+      algorithm: 'SHA-256',
+      input: sha256Text(text),
+      cleaned: sha256Text(cleanedText),
+      confusableSkeleton: sha256Text(skeleton)
+    },
     dataProvenance: {
       confusables: confusablesData,
       scripts: scriptsData
@@ -102,7 +118,7 @@ export function buildReport(text, options = {}) {
     transformations: {
       cleanedText,
       changes,
-      confusableSkeleton: confusableSkeleton(text)
+      confusableSkeleton: skeleton
     },
     limitations
   };
