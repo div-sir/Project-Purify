@@ -1,6 +1,7 @@
 import { createWorkbenchModel } from './core/workbench.js';
 
 const ext = globalThis.browser ?? globalThis.chrome;
+const MAX_PAGE_TEXT = 1024 * 1024;
 const input = document.querySelector('#input');
 const clean = document.querySelector('#clean');
 const findings = document.querySelector('#findings');
@@ -43,12 +44,17 @@ function render() {
   }).catch(() => {});
 }
 
-async function readPageSelection() {
+async function activeTabId() {
   const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) return '';
+  return tab?.id ?? null;
+}
+
+async function readPageSelection() {
+  const tabId = await activeTabId();
+  if (!tabId) return '';
 
   const [result] = await ext.scripting.executeScript({
-    target: { tabId: tab.id },
+    target: { tabId },
     func: () => {
       const active = document.activeElement;
       if (active instanceof HTMLTextAreaElement || (active instanceof HTMLInputElement && /^(text|search|url|email|tel)$/i.test(active.type))) {
@@ -60,6 +66,21 @@ async function readPageSelection() {
     }
   });
   return result?.result ?? '';
+}
+
+async function readVisiblePageText() {
+  const tabId = await activeTabId();
+  if (!tabId) return { text: '', truncated: false };
+
+  const [result] = await ext.scripting.executeScript({
+    target: { tabId },
+    args: [MAX_PAGE_TEXT],
+    func: (limit) => {
+      const text = document.body?.innerText ?? '';
+      return { text: text.slice(0, limit), truncated: text.length > limit };
+    }
+  });
+  return result?.result ?? { text: '', truncated: false };
 }
 
 async function useSelection() {
@@ -74,6 +95,21 @@ async function useSelection() {
     render();
   } catch {
     status.textContent = 'This page does not allow selection access.';
+  }
+}
+
+async function scanPage() {
+  try {
+    const { text, truncated } = await readVisiblePageText();
+    if (!text) {
+      status.textContent = 'No visible page text found.';
+      return;
+    }
+    input.value = text;
+    status.textContent = truncated ? 'Loaded first 1 MiB of visible page text.' : 'Loaded visible page text.';
+    render();
+  } catch {
+    status.textContent = 'This page does not allow page-text access.';
   }
 }
 
@@ -93,6 +129,7 @@ async function loadPendingContextSelection() {
 }
 
 document.querySelector('#selection').addEventListener('click', useSelection);
+document.querySelector('#page').addEventListener('click', scanPage);
 document.querySelector('#copy').addEventListener('click', copyClean);
 document.querySelector('#clear').addEventListener('click', () => {
   input.value = '';
