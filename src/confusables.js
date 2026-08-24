@@ -3,11 +3,11 @@ const COMMON_CONFUSABLES = new Map([
   [0x041A, 'K'], [0x041C, 'M'], [0x041D, 'H'], [0x041E, 'O'], [0x043E, 'o'],
   [0x0420, 'P'], [0x0440, 'p'], [0x0421, 'C'], [0x0441, 'c'], [0x0422, 'T'],
   [0x0425, 'X'], [0x0445, 'x'], [0x0423, 'Y'], [0x0443, 'y'], [0x0456, 'i'],
-  [0x0406, 'I'], [0x0458, 'j'],
+  [0x0406, 'I'], [0x0458, 'j'], [0x04CF, 'l'], [0x0501, 'd'],
   [0x0391, 'A'], [0x03B1, 'a'], [0x0392, 'B'], [0x0395, 'E'], [0x03B5, 'e'],
   [0x0397, 'H'], [0x0399, 'I'], [0x039A, 'K'], [0x039C, 'M'], [0x039D, 'N'],
   [0x039F, 'O'], [0x03BF, 'o'], [0x03A1, 'P'], [0x03C1, 'p'], [0x03A4, 'T'],
-  [0x03A7, 'X'], [0x03C7, 'x'], [0x03A5, 'Y'], [0x03BD, 'v']
+  [0x03A7, 'X'], [0x03C7, 'x'], [0x03A5, 'Y'], [0x03BD, 'v'], [0x03F2, 'c']
 ]);
 
 function codeLabel(cp) {
@@ -15,10 +15,14 @@ function codeLabel(cp) {
 }
 
 function scriptOf(cp) {
-  if ((cp >= 0x0041 && cp <= 0x024F)) return 'Latin';
+  if (cp >= 0x0041 && cp <= 0x024F) return 'Latin';
   if (cp >= 0x0370 && cp <= 0x03FF) return 'Greek';
   if (cp >= 0x0400 && cp <= 0x052F) return 'Cyrillic';
   return 'Other';
+}
+
+function stableId(label, charIndex) {
+  return `confusable:${label}:${charIndex}`;
 }
 
 export function detectConfusables(text) {
@@ -30,14 +34,19 @@ export function detectConfusables(text) {
     const cp = ch.codePointAt(0);
     const replacement = COMMON_CONFUSABLES.get(cp);
     if (replacement) {
+      const label = codeLabel(cp);
+      const script = scriptOf(cp);
       findings.push({
+        id: stableId(label, charIndex),
         type: 'confusable',
         char: ch,
         codePoint: cp,
-        label: codeLabel(cp),
+        label,
         skeleton: replacement,
-        script: scriptOf(cp),
+        script,
         severity: 'medium',
+        reason: `${script} character is visually confusable with Latin ${JSON.stringify(replacement)}.`,
+        remediation: 'Review the character in context. Replace it with the intended script character when mixed-script use is not intentional.',
         utf16Index,
         charIndex
       });
