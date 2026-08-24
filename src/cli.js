@@ -6,7 +6,7 @@ import { buildReport } from './report.js';
 import { analyzeFiles } from './files.js';
 
 function usage() {
-  return `Project Purify CLI\n\nUsage:\n  project-purify --text "text" [--json]\n  project-purify --file path/to/file.txt [--json]\n  project-purify --batch a.txt b.md [--json | --jsonl]\n  cat file.txt | project-purify [--json]\n\nOptions:\n  --text <text>       Analyze literal text.\n  --file <path>       Analyze one UTF-8 text file.\n  --batch <paths...>  Analyze multiple TXT/Markdown files.\n  --json              Print complete JSON output.\n  --jsonl             Print one JSON object per batch input line.\n  --clean             Print only cleaned text for single-input mode.\n  --aggressive        Also remove ZWJ and variation selectors.\n  --help              Show this help.\n`;
+  return `Project Purify CLI\n\nUsage:\n  project-purify --text "text" [--json]\n  project-purify --file path/to/file.txt [--json]\n  project-purify --batch a.txt b.md data.json [--json | --jsonl]\n  cat file.txt | project-purify [--json]\n\nOptions:\n  --text <text>       Analyze literal text.\n  --file <path>       Analyze one UTF-8 text file.\n  --batch <paths...>  Analyze multiple supported text, structured, or source files.\n  --json              Print complete JSON output.\n  --jsonl             Print one JSON object per batch input line.\n  --clean             Print only cleaned text for single-input mode.\n  --aggressive        Also remove ZWJ and variation selectors.\n  --help              Show this help.\n`;
 }
 
 function getValue(args, name) {
@@ -59,8 +59,8 @@ async function runBatch(paths, args, aggressive) {
       process.stdout.write(`ERROR ${result.path}: ${result.error}\n`);
       continue;
     }
-    const { summary } = result.report;
-    process.stdout.write(`${result.path}: controls=${summary.invisibleOrControlCount} confusables=${summary.confusableCount} changed=${summary.changed ? 'yes' : 'no'}\n`);
+    const { summary } = result;
+    process.stdout.write(`${result.path}: format=${result.format} controls=${summary.invisibleOrControlCount} confusables=${summary.confusableCount} changed=${summary.changed ? 'yes' : 'no'} policy=${result.rewritePolicy}\n`);
   }
 
   if (results.some((result) => !result.ok)) process.exitCode = 2;
