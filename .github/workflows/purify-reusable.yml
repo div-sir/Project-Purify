@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: high
+      language:
+        description: Mixed-script language policy hint: auto, en, zh-Hant, zh, ja, ko, or ar.
+        required: false
+        type: string
+        default: auto
       include:
         description: Optional include glob.
         required: false
@@ -66,6 +71,7 @@ jobs:
           args=(
             --dir "${{ inputs.path }}"
             --sarif
+            --language "${{ inputs.language }}"
             --fail-on-severity "${{ inputs.severity }}"
             --exclude "**/.project-purify/**"
           )
