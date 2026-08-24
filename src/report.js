@@ -87,6 +87,13 @@ export function buildReport(text, options = {}) {
       cleaned: sha256Text(cleanedText),
       confusableSkeleton: sha256Text(skeleton)
     },
+    evidenceInterpretation: {
+      model: 'deterministic-rule-based',
+      attributionSupported: false,
+      attributionConfidence: null,
+      severityIsProbability: false,
+      statement: 'Findings describe deterministic Unicode properties and configured policy signals. They do not establish AI authorship, author intent, or malicious intent.'
+    },
     dataProvenance: {
       confusables: confusablesData,
       scripts: scriptsData
