@@ -13,6 +13,8 @@ test('extension uses Manifest V3 with minimal local-analysis permissions', async
   assert.equal(manifest.permissions.includes('activeTab'), true);
   assert.equal(manifest.permissions.includes('scripting'), true);
   assert.equal('host_permissions' in manifest, false);
+  assert.equal(manifest.background.service_worker, 'background.js');
+  assert.deepEqual(manifest.background.scripts, ['background.js']);
 });
 
 test('extension source has no remote text transport API', async () => {
@@ -20,6 +22,14 @@ test('extension source has no remote text transport API', async () => {
   const source = (await Promise.all(files.map((name) => fs.readFile(path.join(ROOT, 'extension', name), 'utf8')))).join('\n');
   assert.doesNotMatch(source, /\bfetch\s*\(/);
   assert.doesNotMatch(source, /XMLHttpRequest|WebSocket|sendBeacon/);
+  assert.match(source, /globalThis\.browser \?\? globalThis\.chrome/);
+});
+
+test('popup exposes selection and visible-page scans', async () => {
+  const html = await fs.readFile(path.join(ROOT, 'extension', 'popup.html'), 'utf8');
+  assert.match(html, /id="selection"/);
+  assert.match(html, /id="page"/);
+  assert.match(html, /Local only/);
 });
 
 test('extension build copies the shared forensic core', async () => {
