@@ -39,13 +39,11 @@ test('extension build copies the shared forensic core', async () => {
   });
   assert.equal(result.status, 0, result.stderr);
 
-  const builtWorkbench = await fs.readFile(path.join(ROOT, 'dist', 'extension', 'core', 'workbench.js'), 'utf8');
-  const sourceWorkbench = await fs.readFile(path.join(ROOT, 'src', 'workbench.js'), 'utf8');
-  assert.equal(builtWorkbench, sourceWorkbench);
-
-  const builtScripts = await fs.readFile(path.join(ROOT, 'dist', 'extension', 'core', 'scripts.js'), 'utf8');
-  const sourceScripts = await fs.readFile(path.join(ROOT, 'src', 'scripts.js'), 'utf8');
-  assert.equal(builtScripts, sourceScripts);
+  for (const name of ['workbench.js', 'scripts.js', 'hash.js', 'options.js', 'version.js', 'report.js']) {
+    const built = await fs.readFile(path.join(ROOT, 'dist', 'extension', 'core', name), 'utf8');
+    const source = await fs.readFile(path.join(ROOT, 'src', name), 'utf8');
+    assert.equal(built, source, name);
+  }
 
   const builtConfusables = await fs.readFile(path.join(ROOT, 'dist', 'extension', 'core', 'generated', 'confusables-data.js'), 'utf8');
   assert.match(builtConfusables, /CONFUSABLES_METADATA/);
