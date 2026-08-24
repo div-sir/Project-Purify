@@ -2,6 +2,7 @@ import { createWorkbenchModel } from './core/workbench.js';
 
 const ext = globalThis.browser ?? globalThis.chrome;
 const MAX_PAGE_TEXT = 1024 * 1024;
+const PENDING_KEYS = ['pendingText', 'pendingSource', 'pendingTruncated'];
 const input = document.querySelector('#input');
 const clean = document.querySelector('#clean');
 const findings = document.querySelector('#findings');
@@ -21,7 +22,7 @@ function render() {
     const li = document.createElement('li');
     const title = document.createElement('div');
     const code = document.createElement('code');
-    code.textContent = `${finding.label} · ${finding.severity}`;
+    code.textContent = `${finding.label ?? finding.category} · ${finding.severity}`;
     title.append(code);
     const detail = document.createElement('div');
     detail.className = 'muted';
@@ -90,8 +91,8 @@ async function useSelection() {
       status.textContent = 'No page selection found.';
       return;
     }
-    input.value = text;
-    status.textContent = 'Loaded current page selection.';
+    input.value = text.slice(0, MAX_PAGE_TEXT);
+    status.textContent = text.length > MAX_PAGE_TEXT ? 'Loaded first 1 MiB of current page selection.' : 'Loaded current page selection.';
     render();
   } catch {
     status.textContent = 'This page does not allow selection access.';
@@ -125,11 +126,12 @@ async function copyClean() {
 }
 
 async function loadPendingContextSelection() {
-  const { pendingText, pendingSource } = await ext.storage.session.get(['pendingText', 'pendingSource']);
+  const { pendingText, pendingSource, pendingTruncated } = await ext.storage.session.get(PENDING_KEYS);
   if (!pendingText) return false;
   input.value = pendingText;
-  status.textContent = pendingSource === 'context-menu' ? 'Loaded context-menu selection.' : 'Loaded pending selection.';
-  await ext.storage.session.remove(['pendingText', 'pendingSource']);
+  if (pendingTruncated) status.textContent = 'Loaded first 1 MiB of context-menu selection.';
+  else status.textContent = pendingSource === 'context-menu' ? 'Loaded context-menu selection.' : 'Loaded pending selection.';
+  await ext.storage.session.remove(PENDING_KEYS);
   render();
   return true;
 }
