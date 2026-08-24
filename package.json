@@ -38,5 +38,13 @@
     "sarif",
     "reproducible"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/div-sir/Project-Purify.git"
+  },
+  "homepage": "https://github.com/div-sir/Project-Purify#readme",
+  "bugs": {
+    "url": "https://github.com/div-sir/Project-Purify/issues"
+  },
   "license": "MIT"
 }
