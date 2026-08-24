@@ -27,9 +27,10 @@ test('runtime detector uses generated data module', () => {
   assert.equal(findings[0].dataSource.unicodeVersion, '17.0.0');
 });
 
-test('report includes Unicode data provenance', () => {
+test('report includes Unicode data provenance and hashes', () => {
   const report = buildReport('safe');
-  assert.equal(report.schemaVersion, '1.2.0');
+  assert.equal(report.schemaVersion, '1.3.0');
   assert.equal(report.dataProvenance.confusables.unicodeVersion, '17.0.0');
   assert.equal(report.dataProvenance.scripts.unicodeVersion, '17.0.0');
+  assert.match(report.evidenceHashes.input, /^[a-f0-9]{64}$/);
 });
