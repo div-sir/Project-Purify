@@ -6,9 +6,10 @@ import { analyzeFile, analyzeFiles, DEFAULT_MAX_FILE_BYTES } from './files.js';
 import { discoverFiles } from './discovery.js';
 import { reportFailsSeverity, resultFailsSeverity, validateSeverity } from './policy.js';
 import { reportToSarif, fileResultToSarif, batchResultsToSarif } from './sarif.js';
+import { validateLanguageHint, VALID_LANGUAGE_HINTS } from './scripts.js';
 
 function usage() {
-  return `Project Purify CLI\n\nUsage:\n  project-purify --text "text" [--json | --sarif]\n  project-purify --file path/to/file.txt [--json | --sarif]\n  project-purify --batch a.txt b.md data.json [--json | --jsonl | --sarif]\n  project-purify --dir . [--include "**/*.js"] [--exclude "**/dist/**"] [--sarif]\n  cat file.txt | project-purify [--json | --sarif]\n\nOptions:\n  --text <text>              Analyze literal text.\n  --file <path>              Analyze one supported UTF-8 file.\n  --batch <paths...>         Analyze multiple supported files.\n  --dir <path>               Discover and analyze supported files recursively.\n  --include <glob>           Directory include glob. Repeat as needed.\n  --exclude <glob>           Directory exclude glob. Repeat as needed.\n  --json                     Print complete JSON output.\n  --jsonl                    Print one JSON object per batch input line.\n  --sarif                    Print SARIF 2.1.0 for code-scanning integrations.\n  --clean                    Print only safe cleaned text for a single rewritable input.\n  --aggressive               Also remove ZWJ and variation selectors.\n  --dry-run                  Report changes without printing cleaned payloads.\n  --fail-on-severity <level> Exit 3 when low, medium, or high threshold is met.\n  --max-bytes <bytes>        In-memory per-file limit. Default: ${DEFAULT_MAX_FILE_BYTES}.\n  --stream                   Use detect-only streaming when plain/source files exceed --max-bytes.\n  --help                     Show this help.\n`;
+  return `Project Purify CLI\n\nUsage:\n  project-purify --text "text" [--json | --sarif]\n  project-purify --file path/to/file.txt [--json | --sarif]\n  project-purify --batch a.txt b.md data.json [--json | --jsonl | --sarif]\n  project-purify --dir . [--include "**/*.js"] [--exclude "**/dist/**"] [--sarif]\n  cat file.txt | project-purify [--json | --sarif]\n\nOptions:\n  --text <text>              Analyze literal text.\n  --file <path>              Analyze one supported UTF-8 file.\n  --batch <paths...>         Analyze multiple supported files.\n  --dir <path>               Discover and analyze supported files recursively.\n  --include <glob>           Directory include glob. Repeat as needed.\n  --exclude <glob>           Directory exclude glob. Repeat as needed.\n  --language <hint>          Script policy hint: ${VALID_LANGUAGE_HINTS.join(', ')}.\n  --json                     Print complete JSON output.\n  --jsonl                    Print one JSON object per batch input line.\n  --sarif                    Print SARIF 2.1.0 for code-scanning integrations.\n  --clean                    Print only safe cleaned text for a single rewritable input.\n  --aggressive               Also remove ZWJ and variation selectors.\n  --dry-run                  Report changes without printing cleaned payloads.\n  --fail-on-severity <level> Exit 3 when low, medium, or high threshold is met.\n  --max-bytes <bytes>        In-memory per-file limit. Default: ${DEFAULT_MAX_FILE_BYTES}.\n  --stream                   Use detect-only streaming when plain/source files exceed --max-bytes.\n  --help                     Show this help.\n`;
 }
 
 function getValue(args, name) {
@@ -54,6 +55,15 @@ function cleanOptions(aggressive) {
   };
 }
 
+function reportOptions(options) {
+  return {
+    clean: cleanOptions(options.aggressive),
+    scripts: {
+      languageHint: options.languageHint
+    }
+  };
+}
+
 function cleanedFilePayload(result) {
   if (result.rewritePolicy === 'detect-only') {
     throw new Error(`Clean output is unavailable for detect-only input: ${result.path}`);
@@ -77,7 +87,7 @@ function printBatchHuman(results, dryRun) {
     const { summary } = result;
     const stream = result.mode === 'stream-detect-only' ? ' stream=yes' : '';
     const dry = dryRun ? ' dryRun=yes' : '';
-    process.stdout.write(`${result.path}: format=${result.format} controls=${summary.invisibleOrControlCount} confusables=${summary.confusableCount} changed=${summary.changed ? 'yes' : 'no'} policy=${result.rewritePolicy}${stream}${dry}\n`);
+    process.stdout.write(`${result.path}: format=${result.format} controls=${summary.invisibleOrControlCount} confusables=${summary.confusableCount} mixedScripts=${summary.mixedScriptCount ?? 0} changed=${summary.changed ? 'yes' : 'no'} policy=${result.rewritePolicy}${stream}${dry}\n`);
   }
 }
 
@@ -86,7 +96,7 @@ async function runBatch(paths, args, options) {
   if (args.includes('--clean')) throw new Error('--clean is only available for single-input mode.');
 
   const results = await analyzeFiles(paths, {
-    report: { clean: cleanOptions(options.aggressive) },
+    report: reportOptions(options),
     maxBytes: options.maxBytes,
     streamLargeFiles: options.streamLargeFiles
   });
@@ -109,7 +119,7 @@ async function runBatch(paths, args, options) {
 
 async function runSingleFile(filePath, args, options) {
   const result = await analyzeFile(filePath, {
-    report: { clean: cleanOptions(options.aggressive) },
+    report: reportOptions(options),
     maxBytes: options.maxBytes,
     streamLargeFiles: options.streamLargeFiles
   });
@@ -130,6 +140,7 @@ async function runSingleFile(filePath, args, options) {
       `Rewrite policy: ${result.rewritePolicy}`,
       `Invisible/control findings: ${summary.invisibleOrControlCount}`,
       `Confusable findings: ${summary.confusableCount}`,
+      `Mixed-script findings: ${summary.mixedScriptCount ?? 0}`,
       `High-risk findings: ${summary.highRiskCount}`,
       `Text changed by safe cleaning: ${summary.changed ? 'yes' : 'no'}`,
       options.dryRun ? 'Dry run: no cleaned payload emitted.' : '',
@@ -166,11 +177,16 @@ async function main() {
   if (args.includes('--fail-on-severity') && failOnSeverity === null) throw new Error('--fail-on-severity requires low, medium, or high.');
   if (failOnSeverity) validateSeverity(failOnSeverity);
 
+  const languageHint = getValue(args, '--language') ?? 'auto';
+  if (args.includes('--language') && getValue(args, '--language') === null) throw new Error('--language requires a value.');
+  validateLanguageHint(languageHint);
+
   const options = {
     aggressive: args.includes('--aggressive'),
     dryRun: args.includes('--dry-run'),
     streamLargeFiles: args.includes('--stream'),
     failOnSeverity,
+    languageHint,
     maxBytes: getPositiveInteger(args, '--max-bytes', DEFAULT_MAX_FILE_BYTES)
   };
 
@@ -204,7 +220,7 @@ async function main() {
     return;
   }
 
-  const report = buildReport(text, { clean: cleanOptions(options.aggressive) });
+  const report = buildReport(text, reportOptions(options));
 
   if (args.includes('--clean')) {
     if (options.dryRun) throw new Error('--dry-run cannot be combined with --clean.');
@@ -217,8 +233,10 @@ async function main() {
     const { summary } = report;
     process.stdout.write([
       'Project Purify',
+      `Language hint: ${options.languageHint}`,
       `Invisible/control findings: ${summary.invisibleOrControlCount}`,
       `Confusable findings: ${summary.confusableCount}`,
+      `Mixed-script findings: ${summary.mixedScriptCount ?? 0}`,
       `High-risk findings: ${summary.highRiskCount}`,
       `Text changed by safe cleaning: ${summary.changed ? 'yes' : 'no'}`,
       options.dryRun ? 'Dry run: no cleaned payload emitted.' : '',
