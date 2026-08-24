@@ -15,6 +15,8 @@ test('streaming analysis preserves absolute positions across tiny chunks', async
   assert.equal(result.mode, 'stream-detect-only');
   assert.equal(result.summary.invisibleOrControlCount, 1);
   assert.equal(result.summary.confusableCount >= 1, true);
+  assert.equal(result.summary.mixedScriptCount, null);
+  assert.equal(result.analysisCoverage.mixedScriptTokens, 'not-evaluated');
   assert.equal(result.findings.some((finding) => finding.label === 'U+200B' && finding.charIndex === 2), true);
   assert.equal(result.rewritePolicy, 'detect-only');
 });
@@ -32,6 +34,7 @@ test('analyzeFile can switch oversized plain text to streaming mode', async () =
   assert.equal(result.mode, 'stream-detect-only');
   assert.equal(result.format, 'text');
   assert.equal(result.summary.invisibleOrControlCount, 1);
+  assert.match(result.limitations.join(' '), /Mixed-script token analysis is not evaluated/);
 });
 
 test('oversized structured files refuse streaming mode', async () => {
